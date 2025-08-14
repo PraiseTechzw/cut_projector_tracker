@@ -43,6 +43,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
   Future<void> _handleSignIn() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Start confetti animation
+    _confettiController.play();
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
