@@ -165,6 +165,15 @@ class FirestoreService {
     }
   }
 
+  /// Delete lecturer
+  Future<void> deleteLecturer(String id) async {
+    try {
+      await _lecturersCollection.doc(id).delete();
+    } catch (e) {
+      throw 'Failed to delete lecturer: $e';
+    }
+  }
+
   // TRANSACTION OPERATIONS
 
   /// Get all transactions
