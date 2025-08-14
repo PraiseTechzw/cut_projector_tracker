@@ -20,11 +20,13 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
   String? _scannedCode;
   Projector? _scannedProjector;
   bool _isLoading = false;
+  bool _hasError = false;
+  String _errorMessage = '';
 
   @override
   void initState() {
     super.initState();
-    _scannerController = MobileScannerController();
+    _initializeScanner();
   }
 
   @override
@@ -33,13 +35,54 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
     super.dispose();
   }
 
+  /// Initialize the scanner controller
+  void _initializeScanner() {
+    _scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.normal,
+      facing: CameraFacing.back,
+      torchEnabled: false,
+    );
+
+    // Start scanning automatically
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startScanner();
+    });
+  }
+
+  /// Start the scanner
+  void _startScanner() {
+    if (_scannerController != null && !_isScanning) {
+      _scannerController!.start();
+      setState(() {
+        _isScanning = true;
+        _hasError = false;
+        _errorMessage = '';
+      });
+    }
+  }
+
+  /// Stop the scanner
+  void _stopScanner() {
+    if (_scannerController != null && _isScanning) {
+      _scannerController!.stop();
+      setState(() {
+        _isScanning = false;
+      });
+    }
+  }
+
   /// Handle barcode detection
   void _onDetect(BarcodeCapture capture) {
-    if (_isScanning) return;
+    if (!_isScanning || _isLoading) return;
+
+    final barcode = capture.barcodes.first;
+    if (barcode.rawValue == null || barcode.rawValue!.isEmpty) return;
 
     setState(() {
-      _isScanning = true;
-      _scannedCode = capture.barcodes.first.rawValue;
+      _scannedCode = barcode.rawValue;
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = '';
     });
 
     _processScannedCode();
@@ -49,14 +92,12 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
   Future<void> _processScannedCode() async {
     if (_scannedCode == null) return;
 
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
       final firestoreService = ref.read(firestoreServiceProvider);
-      final projector = await firestoreService.getProjectorBySerialNumber(_scannedCode!);
-      
+      final projector = await firestoreService.getProjectorBySerialNumber(
+        _scannedCode!,
+      );
+
       setState(() {
         _scannedProjector = projector;
         _isLoading = false;
@@ -70,25 +111,32 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
     } catch (e) {
       setState(() {
         _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'Failed to fetch projector data: $e';
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: AppTheme.errorColor,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
     }
 
-    // Reset scanning state after delay
-    Future.delayed(const Duration(seconds: 2), () {
+    // Reset scanning state after delay to allow user to see the result
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() {
-          _isScanning = false;
+          _isScanning = true;
         });
+        // Restart scanner if it was stopped
+        if (_scannerController != null) {
+          _scannerController!.start();
+        }
       }
     });
   }
@@ -97,29 +145,53 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
   void _showProjectorInfo(Projector projector) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Projector Found'),
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: AppTheme.successColor, size: 24),
+            const SizedBox(width: 8),
+            const Text('Projector Found'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Serial: ${projector.serialNumber}'),
-            const SizedBox(height: 8),
-            Text('Status: ${projector.status}'),
+            _buildInfoRow('Serial Number', projector.serialNumber),
+            const SizedBox(height: 12),
+            _buildInfoRow(
+              'Status',
+              projector.status,
+              statusColor: _getStatusColor(projector.status),
+            ),
             if (projector.lastIssuedTo != null) ...[
-              const SizedBox(height: 8),
-              Text('Last Issued To: ${projector.lastIssuedTo}'),
+              const SizedBox(height: 12),
+              _buildInfoRow('Last Issued To', projector.lastIssuedTo!),
             ],
             if (projector.lastIssuedDate != null) ...[
-              const SizedBox(height: 8),
-              Text('Last Issued: ${_formatDate(projector.lastIssuedDate!)}'),
+              const SizedBox(height: 12),
+              _buildInfoRow(
+                'Last Issued',
+                _formatDate(projector.lastIssuedDate!),
+              ),
             ],
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _resetScan();
+            },
+            child: const Text('Scan Another'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // TODO: Navigate to issuance screen with projector data
+            },
+            child: const Text('Issue Projector'),
           ),
         ],
       ),
@@ -130,17 +202,99 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
   void _showProjectorNotFound() {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Projector Not Found'),
-        content: Text('No projector found with serial number: $_scannedCode'),
+        title: Row(
+          children: [
+            Icon(Icons.error_outline, color: AppTheme.warningColor, size: 24),
+            const SizedBox(width: 8),
+            const Text('Projector Not Found'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('No projector found with serial number:'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.textTertiary),
+              ),
+              child: Text(
+                _scannedCode!,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Please check the serial number or contact an administrator.',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _resetScan();
+            },
+            child: const Text('Try Again'),
           ),
         ],
       ),
     );
+  }
+
+  /// Build an info row for the dialog
+  Widget _buildInfoRow(String label, String value, {Color? statusColor}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: statusColor ?? AppTheme.textPrimary,
+              fontWeight: statusColor != null
+                  ? FontWeight.w600
+                  : FontWeight.normal,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Get status color based on projector status
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'available':
+        return AppTheme.statusAvailable;
+      case 'issued':
+        return AppTheme.statusIssued;
+      case 'maintenance':
+        return AppTheme.statusMaintenance;
+      default:
+        return AppTheme.textPrimary;
+    }
   }
 
   /// Format date for display
@@ -148,63 +302,143 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
-  /// Toggle scanner
+  /// Reset scan state
+  void _resetScan() {
+    setState(() {
+      _scannedCode = null;
+      _scannedProjector = null;
+      _hasError = false;
+      _errorMessage = '';
+    });
+  }
+
+  /// Toggle scanner on/off
   void _toggleScanner() {
     if (_scannerController?.isStarting == true) return;
-    
+
     if (_isScanning) {
-      _scannerController?.stop();
-      setState(() {
-        _isScanning = false;
-      });
+      _stopScanner();
     } else {
-      _scannerController?.start();
-      setState(() {
-        _isScanning = true;
-      });
+      _startScanner();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Scan Projector'),
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
       body: Column(
         children: [
           // Scanner View
           Expanded(
             child: Stack(
               children: [
+                // Scanner
                 MobileScanner(
                   controller: _scannerController,
                   onDetect: _onDetect,
+                  errorBuilder: (context, error, child) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: AppTheme.errorColor,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Scanner Error',
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(color: AppTheme.errorColor),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            error.errorDetails?.message ??
+                                'Unknown error occurred',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: AppTheme.textSecondary),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _initializeScanner,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-                
+
                 // Scanning overlay
-                if (_isScanning)
+                if (_isScanning && !_isLoading)
                   Container(
                     decoration: BoxDecoration(
-                      border: Border.all(
-                        color: AppTheme.accentColor,
-                        width: 3,
-                      ),
+                      border: Border.all(color: AppTheme.accentColor, width: 3),
                     ),
                     child: const Center(
-                      child: Text(
-                        'Scanning...',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.qr_code_scanner,
+                            size: 64,
+                            color: Colors.white,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Position barcode within frame',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Scanning...',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                
+
                 // Loading indicator
                 if (_isLoading)
-                  const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  Container(
+                    color: Colors.black54,
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                            strokeWidth: 3,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Processing...',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
               ],
@@ -214,9 +448,51 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
           // Control Panel
           Container(
             padding: const EdgeInsets.all(AppConstants.defaultPadding),
-            color: AppTheme.backgroundColor,
+            decoration: BoxDecoration(
+              color: AppTheme.backgroundColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
             child: Column(
               children: [
+                // Error Display
+                if (_hasError) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppConstants.defaultPadding),
+                    decoration: BoxDecoration(
+                      color: AppTheme.errorColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.borderRadius,
+                      ),
+                      border: Border.all(color: AppTheme.errorColor),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: AppTheme.errorColor,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _errorMessage,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: AppTheme.errorColor),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Scanned Code Display
                 if (_scannedCode != null) ...[
                   Container(
@@ -224,25 +500,41 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
                     padding: const EdgeInsets.all(AppConstants.defaultPadding),
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceColor,
-                      borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-                      border: Border.all(color: AppTheme.textTertiary),
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.borderRadius,
+                      ),
+                      border: Border.all(color: AppTheme.accentColor),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Scanned Code:',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.qr_code,
+                              color: AppTheme.accentColor,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Scanned Code:',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.accentColor,
+                                  ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                         Text(
                           _scannedCode!,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontFamily: 'monospace',
-                            fontSize: 16,
-                          ),
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                fontFamily: 'monospace',
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                       ],
                     ),
@@ -257,7 +549,14 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _toggleScanner,
                         icon: Icon(_isScanning ? Icons.stop : Icons.play_arrow),
-                        label: Text(_isScanning ? 'Stop Scanner' : 'Start Scanner'),
+                        label: Text(
+                          _isScanning ? 'Stop Scanner' : 'Start Scanner',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _isScanning
+                              ? AppTheme.errorColor
+                              : AppTheme.primaryColor,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -265,6 +564,14 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () {
                           // TODO: Navigate to manual entry screen
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Manual entry feature coming soon!',
+                              ),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
                         },
                         icon: const Icon(Icons.keyboard),
                         label: const Text('Manual Entry'),
