@@ -29,7 +29,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 2),
+    );
   }
 
   @override
@@ -58,20 +60,25 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      
+
       if (mounted) {
         // Navigate to welcome screen
-        context.go('/welcome', extra: {
-          'userName': _emailController.text.split('@')[0], // Extract name from email
-          'isNewUser': false,
-        });
+        context.go(
+          '/welcome',
+          extra: {
+            'userName': _emailController.text.split(
+              '@',
+            )[0], // Extract name from email
+            'isNewUser': false,
+          },
+        );
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString()),
@@ -124,7 +131,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
               ],
             ),
           ),
-          
+
           // Main content
           SafeArea(
             child: Center(
@@ -162,15 +169,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                       // Welcome Text
                       Text(
                         'Welcome Back',
-                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          color: AppTheme.textPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.displaySmall
+                            ?.copyWith(
+                              color: AppTheme.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
                         textAlign: TextAlign.center,
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       Text(
                         'Sign in to access the projector tracker',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -178,7 +186,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      
+
                       const SizedBox(height: 48),
 
                       // Error Message Display
@@ -188,7 +196,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                           margin: const EdgeInsets.only(bottom: 24),
                           decoration: BoxDecoration(
                             color: AppTheme.errorColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                            borderRadius: BorderRadius.circular(
+                              AppConstants.borderRadius,
+                            ),
                             border: Border.all(color: AppTheme.errorColor),
                           ),
                           child: Row(
@@ -243,7 +253,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
                           }
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                          if (!RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          ).hasMatch(value)) {
                             return 'Please enter a valid email';
                           }
                           return null;
@@ -265,13 +277,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                           border: const OutlineInputBorder(),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                              _obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                             ),
-                            onPressed: _isLoading ? null : () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
                           ),
                         ),
                         validator: (value) {
@@ -293,7 +309,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                            borderRadius: BorderRadius.circular(
+                              AppConstants.borderRadius,
+                            ),
                           ),
                         ),
                         child: _isLoading
@@ -302,7 +320,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text(
@@ -322,14 +342,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                         children: [
                           Text(
                             "Don't have an account? ",
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: AppTheme.textSecondary),
                           ),
                           TextButton(
-                            onPressed: _isLoading ? null : () {
-                              context.go('/signup');
-                            },
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    context.go('/signup');
+                                  },
                             child: Text(
                               'Sign Up',
                               style: TextStyle(
@@ -345,16 +366,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
 
                       // Forgot Password Link
                       TextButton(
-                        onPressed: _isLoading ? null : () {
-                          // TODO: Implement forgot password functionality
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Forgot password functionality coming soon'),
-                              backgroundColor: AppTheme.primaryColor,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                // TODO: Implement forgot password functionality
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Forgot password functionality coming soon',
+                                    ),
+                                    backgroundColor: AppTheme.primaryColor,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
                         child: Text(
                           'Forgot Password?',
                           style: TextStyle(
