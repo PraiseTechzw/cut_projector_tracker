@@ -25,7 +25,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
   final _confirmPasswordController = TextEditingController();
   final _departmentController = TextEditingController();
   final _employeeIdController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -35,7 +35,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 2),
+    );
   }
 
   @override
@@ -61,7 +63,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
 
     try {
       final authService = ref.read(firebaseAuthServiceProvider);
-      
+
       // Create user account
       final userCredential = await authService.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
@@ -70,20 +72,20 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
 
       // TODO: Save additional user data to Firestore (name, department, employee ID)
       // This would typically be done in a separate service or after user creation
-      
+
       if (mounted) {
         // Navigate to welcome screen
-        context.go('/welcome', extra: {
-          'userName': _nameController.text.trim(),
-          'isNewUser': true,
-        });
+        context.go(
+          '/welcome',
+          extra: {'userName': _nameController.text.trim(), 'isNewUser': true},
+        );
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString()),
@@ -165,9 +167,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  
+
                   const SizedBox(height: 8),
-                  
+
                   Text(
                     'Join the CUT Projector Tracker system',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -175,7 +177,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  
+
                   const SizedBox(height: 32),
 
                   // Error Message Display
@@ -185,7 +187,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                       margin: const EdgeInsets.only(bottom: 24),
                       decoration: BoxDecoration(
                         color: AppTheme.errorColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.borderRadius,
+                        ),
                         border: Border.all(color: AppTheme.errorColor),
                       ),
                       child: Row(
@@ -306,7 +310,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                       if (value == null || value.isEmpty) {
                         return 'Please enter your email';
                       }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                      if (!RegExp(
+                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                      ).hasMatch(value)) {
                         return 'Please enter a valid email';
                       }
                       return null;
@@ -328,13 +334,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
-                        onPressed: _isLoading ? null : () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
                       ),
                     ),
                     validator: (value) {
@@ -344,7 +354,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                       if (value.length < 8) {
                         return 'Password must be at least 8 characters';
                       }
-                      if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
+                      if (!RegExp(
+                        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)',
+                      ).hasMatch(value)) {
                         return 'Password must contain uppercase, lowercase, and number';
                       }
                       return null;
@@ -366,13 +378,18 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                          _obscureConfirmPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
-                        onPressed: _isLoading ? null : () {
-                          setState(() {
-                            _obscureConfirmPassword = !_obscureConfirmPassword;
-                          });
-                        },
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                setState(() {
+                                  _obscureConfirmPassword =
+                                      !_obscureConfirmPassword;
+                                });
+                              },
                       ),
                     ),
                     validator: (value) {
@@ -394,7 +411,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.borderRadius,
+                        ),
                       ),
                     ),
                     child: _isLoading
@@ -403,7 +422,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(
@@ -428,9 +449,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                         ),
                       ),
                       TextButton(
-                        onPressed: _isLoading ? null : () {
-                          context.go('/signin');
-                        },
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                context.go('/signin');
+                              },
                         child: Text(
                           'Sign In',
                           style: TextStyle(
