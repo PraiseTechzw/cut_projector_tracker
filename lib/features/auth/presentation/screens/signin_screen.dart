@@ -343,6 +343,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
           ),
         ),
       ),
-    );
+    )]);
   }
 }
