@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firebase_auth_service.dart';
+import 'welcome_screen.dart';
 
 /// Sign up screen for new staff registration
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -60,21 +61,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       // This would typically be done in a separate service or after user creation
       
       if (mounted) {
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully! Please sign in.'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 3),
-          ),
-        );
-        
-        // Navigate to sign in screen
-        Future.delayed(const Duration(milliseconds: 1000), () {
-          if (mounted) {
-            context.go('/signin');
-          }
+        // Navigate to welcome screen
+        context.go('/welcome', extra: {
+          'userName': _nameController.text.trim(),
+          'isNewUser': true,
         });
       }
     } catch (e) {

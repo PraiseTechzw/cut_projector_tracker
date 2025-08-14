@@ -5,6 +5,7 @@ import 'package:confetti/confetti.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firebase_auth_service.dart';
+import 'welcome_screen.dart';
 
 /// Sign in screen for staff authentication
 class SignInScreen extends ConsumerStatefulWidget {
@@ -14,18 +15,27 @@ class SignInScreen extends ConsumerStatefulWidget {
   ConsumerState<SignInScreen> createState() => _SignInScreenState();
 }
 
-class _SignInScreenState extends ConsumerState<SignInScreen> {
+class _SignInScreenState extends ConsumerState<SignInScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
+  late ConfettiController _confettiController;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confettiController.dispose();
     super.dispose();
   }
 
@@ -46,21 +56,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       );
       
       if (mounted) {
-        // Show success message before navigation
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sign in successful!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 1),
-          ),
-        );
-        
-        // Navigate after a brief delay
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            context.go('/home');
-          }
+        // Navigate to welcome screen
+        context.go('/welcome', extra: {
+          'userName': _emailController.text.split('@')[0], // Extract name from email
+          'isNewUser': false,
         });
       }
     } catch (e) {

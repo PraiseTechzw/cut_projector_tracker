@@ -8,6 +8,7 @@ import 'core/constants/app_constants.dart';
 import 'features/auth/presentation/screens/signin_screen.dart';
 import 'features/auth/presentation/screens/signup_screen.dart';
 import 'features/auth/presentation/screens/splash_screen.dart';
+import 'features/auth/presentation/screens/welcome_screen.dart';
 import 'features/auth/presentation/widgets/auth_guard.dart';
 import 'shared/widgets/main_navigation.dart';
 
@@ -47,6 +48,15 @@ final _router = GoRouter(
       path: '/signup',
       builder: (context, state) =>
           const AuthGuard(requireAuth: false, child: SignUpScreen()),
+    ),
+    GoRoute(
+      path: '/welcome',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final userName = extra?['userName'] ?? 'User';
+        final isNewUser = extra?['isNewUser'] ?? false;
+        return WelcomeScreen(userName: userName, isNewUser: isNewUser);
+      },
     ),
 
     // Protected routes (auth required)
