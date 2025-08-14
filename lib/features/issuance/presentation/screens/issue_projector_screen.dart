@@ -27,6 +27,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
   final _newLecturerNameController = TextEditingController();
   final _newLecturerDepartmentController = TextEditingController();
   final _newLecturerEmailController = TextEditingController();
+  final _newLecturerPhoneNumberController = TextEditingController();
   final _newLecturerEmployeeIdController = TextEditingController();
 
   bool _isLoading = false;
@@ -50,6 +51,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
     _newLecturerNameController.dispose();
     _newLecturerDepartmentController.dispose();
     _newLecturerEmailController.dispose();
+    _newLecturerPhoneNumberController.dispose();
     _newLecturerEmployeeIdController.dispose();
     super.dispose();
   }
@@ -155,6 +157,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
         name: _newLecturerNameController.text.trim(),
         department: _newLecturerDepartmentController.text.trim(),
         email: _newLecturerEmailController.text.trim(),
+        phoneNumber: _newLecturerPhoneNumberController.text.trim().isEmpty
+            ? null
+            : _newLecturerPhoneNumberController.text.trim(),
         employeeId: _newLecturerEmployeeIdController.text.trim().isEmpty
             ? null
             : _newLecturerEmployeeIdController.text.trim(),
@@ -203,6 +208,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
         _newLecturerNameController.clear();
         _newLecturerDepartmentController.clear();
         _newLecturerEmailController.clear();
+        _newLecturerPhoneNumberController.clear();
         _newLecturerEmployeeIdController.clear();
 
         // Refresh lecturers list
@@ -967,6 +973,22 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
               }
               return null;
             },
+          ),
+          const SizedBox(height: 16),
+
+          // Phone Number Field (Optional)
+          TextFormField(
+            controller: _newLecturerPhoneNumberController,
+            decoration: InputDecoration(
+              labelText: 'Phone Number (Optional)',
+              hintText: 'Enter phone number',
+              prefixIcon: const Icon(Icons.phone),
+              filled: true,
+              fillColor: AppTheme.backgroundColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
 
