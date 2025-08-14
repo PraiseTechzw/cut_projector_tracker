@@ -35,9 +35,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 2),
-    );
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
   }
 
   @override
@@ -151,7 +149,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
               ],
             ),
           ),
-          
+
           // Main content
           SafeArea(
             child: Center(
@@ -163,336 +161,338 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                  // App Logo
-                  Container(
-                    width: 80,
-                    height: 80,
-                    margin: const EdgeInsets.only(bottom: 24),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.primaryColor.withOpacity(0.3),
-                          blurRadius: 15,
-                          offset: const Offset(0, 8),
+                      // App Logo
+                      Container(
+                        width: 80,
+                        height: 80,
+                        margin: const EdgeInsets.only(bottom: 24),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryColor.withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.person_add,
+                          size: 40,
+                          color: Colors.white,
+                        ),
+                      ),
+
+                      // Welcome Text
+                      Text(
+                        'Create Your Account',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      Text(
+                        'Join the CUT Projector Tracker system',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Error Message Display
+                      if (_errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          margin: const EdgeInsets.only(bottom: 24),
+                          decoration: BoxDecoration(
+                            color: AppTheme.errorColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(
+                              AppConstants.borderRadius,
+                            ),
+                            border: Border.all(color: AppTheme.errorColor),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: AppTheme.errorColor,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: TextStyle(
+                                    color: AppTheme.errorColor,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.close,
+                                  color: AppTheme.errorColor,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _errorMessage = null;
+                                  });
+                                },
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    ),
-                    child: const Icon(
-                      Icons.person_add,
-                      size: 40,
-                      color: Colors.white,
-                    ),
-                  ),
 
-                  // Welcome Text
-                  Text(
-                    'Create Your Account',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppTheme.textPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Text(
-                    'Join the CUT Projector Tracker system',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Error Message Display
-                  if (_errorMessage != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      margin: const EdgeInsets.only(bottom: 24),
-                      decoration: BoxDecoration(
-                        color: AppTheme.errorColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(
-                          AppConstants.borderRadius,
+                      // Full Name Field
+                      TextFormField(
+                        controller: _nameController,
+                        textInputAction: TextInputAction.next,
+                        enabled: !_isLoading,
+                        decoration: const InputDecoration(
+                          labelText: 'Full Name',
+                          prefixIcon: Icon(Icons.person_outline),
+                          hintText: 'Enter your full name',
+                          border: OutlineInputBorder(),
                         ),
-                        border: Border.all(color: AppTheme.errorColor),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your full name';
+                          }
+                          if (value.trim().split(' ').length < 2) {
+                            return 'Please enter your full name (first and last name)';
+                          }
+                          return null;
+                        },
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            color: AppTheme.errorColor,
-                            size: 20,
+
+                      const SizedBox(height: 20),
+
+                      // Department Field
+                      TextFormField(
+                        controller: _departmentController,
+                        textInputAction: TextInputAction.next,
+                        enabled: !_isLoading,
+                        decoration: const InputDecoration(
+                          labelText: 'Department',
+                          prefixIcon: Icon(Icons.business_outlined),
+                          hintText: 'Enter your department',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your department';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Employee ID Field
+                      TextFormField(
+                        controller: _employeeIdController,
+                        textInputAction: TextInputAction.next,
+                        enabled: !_isLoading,
+                        decoration: const InputDecoration(
+                          labelText: 'Employee ID',
+                          prefixIcon: Icon(Icons.badge_outlined),
+                          hintText: 'Enter your employee ID',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your employee ID';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Email Field
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        enabled: !_isLoading,
+                        decoration: const InputDecoration(
+                          labelText: 'Email Address',
+                          prefixIcon: Icon(Icons.email_outlined),
+                          hintText: 'Enter your email',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          if (!RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          ).hasMatch(value)) {
+                            return 'Please enter a valid email';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Password Field
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.next,
+                        enabled: !_isLoading,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: const Icon(Icons.lock_outlined),
+                          hintText: 'Create a password',
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a password';
+                          }
+                          if (value.length < 8) {
+                            return 'Password must be at least 8 characters';
+                          }
+                          if (!RegExp(
+                            r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)',
+                          ).hasMatch(value)) {
+                            return 'Password must contain uppercase, lowercase, and number';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Confirm Password Field
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: _obscureConfirmPassword,
+                        textInputAction: TextInputAction.done,
+                        enabled: !_isLoading,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          prefixIcon: const Icon(Icons.lock_outlined),
+                          hintText: 'Confirm your password',
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirmPassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _obscureConfirmPassword =
+                                          !_obscureConfirmPassword;
+                                    });
+                                  },
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please confirm your password';
+                          }
+                          if (value != _passwordController.text) {
+                            return 'Passwords do not match';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Sign Up Button
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _handleSignUp,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppConstants.borderRadius,
+                            ),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Create Account',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Sign In Link
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Already have an account? ',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    context.go('/signin');
+                                  },
                             child: Text(
-                              _errorMessage!,
+                              'Sign In',
                               style: TextStyle(
-                                color: AppTheme.errorColor,
-                                fontSize: 14,
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.close,
-                              color: AppTheme.errorColor,
-                              size: 20,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _errorMessage = null;
-                              });
-                            },
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-
-                  // Full Name Field
-                  TextFormField(
-                    controller: _nameController,
-                    textInputAction: TextInputAction.next,
-                    enabled: !_isLoading,
-                    decoration: const InputDecoration(
-                      labelText: 'Full Name',
-                      prefixIcon: Icon(Icons.person_outline),
-                      hintText: 'Enter your full name',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your full name';
-                      }
-                      if (value.trim().split(' ').length < 2) {
-                        return 'Please enter your full name (first and last name)';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Department Field
-                  TextFormField(
-                    controller: _departmentController,
-                    textInputAction: TextInputAction.next,
-                    enabled: !_isLoading,
-                    decoration: const InputDecoration(
-                      labelText: 'Department',
-                      prefixIcon: Icon(Icons.business_outlined),
-                      hintText: 'Enter your department',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your department';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Employee ID Field
-                  TextFormField(
-                    controller: _employeeIdController,
-                    textInputAction: TextInputAction.next,
-                    enabled: !_isLoading,
-                    decoration: const InputDecoration(
-                      labelText: 'Employee ID',
-                      prefixIcon: Icon(Icons.badge_outlined),
-                      hintText: 'Enter your employee ID',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your employee ID';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Email Field
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    enabled: !_isLoading,
-                    decoration: const InputDecoration(
-                      labelText: 'Email Address',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      hintText: 'Enter your email',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!RegExp(
-                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                      ).hasMatch(value)) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Password Field
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.next,
-                    enabled: !_isLoading,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outlined),
-                      hintText: 'Create a password',
-                      border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
-                        onPressed: _isLoading
-                            ? null
-                            : () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a password';
-                      }
-                      if (value.length < 8) {
-                        return 'Password must be at least 8 characters';
-                      }
-                      if (!RegExp(
-                        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)',
-                      ).hasMatch(value)) {
-                        return 'Password must contain uppercase, lowercase, and number';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Confirm Password Field
-                  TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: _obscureConfirmPassword,
-                    textInputAction: TextInputAction.done,
-                    enabled: !_isLoading,
-                    decoration: InputDecoration(
-                      labelText: 'Confirm Password',
-                      prefixIcon: const Icon(Icons.lock_outlined),
-                      hintText: 'Confirm your password',
-                      border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureConfirmPassword
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
-                        onPressed: _isLoading
-                            ? null
-                            : () {
-                                setState(() {
-                                  _obscureConfirmPassword =
-                                      !_obscureConfirmPassword;
-                                });
-                              },
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please confirm your password';
-                      }
-                      if (value != _passwordController.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Sign Up Button
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _handleSignUp,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppConstants.borderRadius,
-                        ),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
-                        : const Text(
-                            'Create Account',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Sign In Link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Already have an account? ',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () {
-                                context.go('/signin');
-                              },
-                        child: Text(
-                          'Sign In',
-                          style: TextStyle(
-                            color: AppTheme.primaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
