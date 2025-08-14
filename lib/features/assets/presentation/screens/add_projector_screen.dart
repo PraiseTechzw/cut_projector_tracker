@@ -8,7 +8,24 @@ import '../../../../shared/models/projector.dart';
 
 /// Screen for adding new projectors to the system
 class AddProjectorScreen extends ConsumerStatefulWidget {
-  const AddProjectorScreen({super.key});
+  final String? initialSerialNumber;
+  final String? initialModelName;
+  final String? initialProjectorName;
+  final String? initialStatus;
+  final String? initialLocation;
+  final String? initialNotes;
+  final bool isEditing;
+
+  const AddProjectorScreen({
+    super.key,
+    this.initialSerialNumber,
+    this.initialModelName,
+    this.initialProjectorName,
+    this.initialStatus,
+    this.initialLocation,
+    this.initialNotes,
+    this.isEditing = false,
+  });
 
   @override
   ConsumerState<AddProjectorScreen> createState() => _AddProjectorScreenState();
@@ -32,6 +49,12 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
   void initState() {
     super.initState();
     _statusController.text = _selectedStatus;
+
+    // Pre-fill serial number if provided
+    if (widget.initialSerialNumber != null) {
+      _serialNumberController.text = widget.initialSerialNumber!;
+    }
+
     // Initialize scanner when the screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeScanner();
@@ -907,8 +930,8 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
           ),
         );
 
-        // Navigate back
-        Navigator.of(context).pop();
+        // Navigate back with success result
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {

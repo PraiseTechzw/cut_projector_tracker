@@ -8,6 +8,7 @@ import '../../../../core/services/firestore_service.dart';
 import '../../../../shared/models/projector.dart';
 import '../../../issuance/presentation/screens/issue_projector_screen.dart';
 import '../../../returns/presentation/screens/return_projector_screen.dart';
+import '../../../assets/presentation/screens/add_projector_screen.dart';
 
 /// Screen for scanning projector barcodes/QR codes
 class ScanningScreen extends ConsumerStatefulWidget {
@@ -328,6 +329,67 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
               const SizedBox(height: 12),
               _buildInfoRow('Notes', projector.notes!),
             ],
+
+            // Smart action suggestions
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppTheme.accentColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline,
+                        color: AppTheme.accentColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Suggested Actions:',
+                        style: TextStyle(
+                          color: AppTheme.accentColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (projector.status.toLowerCase() == 'available')
+                    Text(
+                      '• This projector is available for issuance',
+                      style: TextStyle(
+                        color: AppTheme.accentColor,
+                        fontSize: 12,
+                      ),
+                    )
+                  else if (projector.status.toLowerCase() == 'issued')
+                    Text(
+                      '• This projector is currently issued and can be returned',
+                      style: TextStyle(
+                        color: AppTheme.accentColor,
+                        fontSize: 12,
+                      ),
+                    )
+                  else if (projector.status.toLowerCase() == 'maintenance')
+                    Text(
+                      '• This projector is under maintenance',
+                      style: TextStyle(
+                        color: AppTheme.accentColor,
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [
@@ -337,6 +399,18 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
               _resetScan();
             },
             child: const Text('Scan Another'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _navigateToEditProjector(projector);
+            },
+            icon: const Icon(Icons.edit),
+            label: const Text('Edit Details'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.textSecondary,
+              side: BorderSide(color: AppTheme.textTertiary),
+            ),
           ),
           if (projector.status.toLowerCase() == 'available')
             ElevatedButton.icon(
@@ -377,7 +451,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.error_outline, color: AppTheme.warningColor, size: 24),
+            Icon(Icons.search, color: AppTheme.warningColor, size: 24),
             const SizedBox(width: 8),
             const Text('Projector Not Found'),
           ],
@@ -404,9 +478,35 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Please check the serial number or contact an administrator.',
-              style: TextStyle(color: AppTheme.textSecondary),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppTheme.accentColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: AppTheme.accentColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This appears to be a new projector. Would you like to add it to the database?',
+                      style: TextStyle(
+                        color: AppTheme.accentColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -416,7 +516,19 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
               Navigator.of(context).pop();
               _resetScan();
             },
-            child: const Text('Try Again'),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _navigateToAddProjector();
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Add Projector'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentColor,
+              foregroundColor: Colors.white,
+            ),
           ),
         ],
       ),
@@ -489,6 +601,84 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
         builder: (context) => ReturnProjectorScreen(projector: projector),
       ),
     );
+  }
+
+  /// Navigate to add new projector screen
+  void _navigateToAddProjector() {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (context) =>
+                AddProjectorScreen(initialSerialNumber: _scannedCode!),
+          ),
+        )
+        .then((result) {
+          // Check if projector was added successfully
+          if (result == true) {
+            // Show success message and automatically scan the new projector
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.white),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Projector "${_scannedCode}" added successfully! Automatically scanning...',
+                        ),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: AppTheme.statusAvailable,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+
+              // Automatically scan the newly added projector after a short delay
+              Future.delayed(const Duration(seconds: 2), () {
+                if (mounted) {
+                  _processManualEntryForNewProjector(_scannedCode!);
+                }
+              });
+            }
+          }
+        });
+  }
+
+  /// Process manual entry for newly added projector
+  Future<void> _processManualEntryForNewProjector(String serialNumber) async {
+    setState(() {
+      _scannedCode = serialNumber;
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = '';
+    });
+
+    try {
+      final firestoreService = ref.read(firestoreServiceProvider);
+      final projector = await firestoreService.getProjectorBySerialNumber(
+        serialNumber,
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (projector != null) {
+        // Provide success feedback
+        HapticFeedback.lightImpact();
+        _addToRecentScans(serialNumber);
+        _showProjectorInfo(projector);
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'Failed to fetch projector data: $e';
+      });
+    }
   }
 
   /// Reset scan state
@@ -574,6 +764,57 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
         ],
       ),
     );
+  }
+
+  /// Navigate to edit projector screen
+  void _navigateToEditProjector(Projector projector) {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (context) => AddProjectorScreen(
+              initialSerialNumber: projector.serialNumber,
+              initialModelName: projector.modelName,
+              initialProjectorName: projector.projectorName,
+              initialStatus: projector.status,
+              initialLocation: projector.location,
+              initialLastIssuedTo: projector.lastIssuedTo,
+              initialLastIssuedDate: projector.lastIssuedDate,
+              initialNotes: projector.notes,
+            ),
+          ),
+        )
+        .then((result) {
+          if (result == true) {
+            // Show success message and automatically scan the updated projector
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.white),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Projector "${projector.serialNumber}" updated successfully! Automatically scanning...',
+                        ),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: AppTheme.statusAvailable,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+
+              // Automatically scan the newly added projector after a short delay
+              Future.delayed(const Duration(seconds: 2), () {
+                if (mounted) {
+                  _processManualEntryForNewProjector(projector.serialNumber);
+                }
+              });
+            }
+          }
+        });
   }
 
   @override
