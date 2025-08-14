@@ -98,6 +98,8 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
       return lecturer.name.toLowerCase().contains(searchLower) ||
           lecturer.department.toLowerCase().contains(searchLower) ||
           lecturer.email.toLowerCase().contains(searchLower) ||
+          (lecturer.phoneNumber?.toLowerCase().contains(searchLower) ??
+              false) ||
           (lecturer.employeeId?.toLowerCase().contains(searchLower) ?? false);
     }).toList();
 
@@ -697,7 +699,21 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                     lecturer.name,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: Text(lecturer.department),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(lecturer.department),
+                      if (lecturer.phoneNumber != null &&
+                          lecturer.phoneNumber!.isNotEmpty)
+                        Text(
+                          lecturer.phoneNumber!,
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                    ],
+                  ),
                   trailing: Text(
                     lecturer.email,
                     style: TextStyle(
@@ -759,6 +775,17 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                           fontSize: 12,
                         ),
                       ),
+                      if (_selectedLecturer!.phoneNumber != null &&
+                          _selectedLecturer!.phoneNumber!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          _selectedLecturer!.phoneNumber!,
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
