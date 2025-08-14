@@ -777,9 +777,8 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
               initialProjectorName: projector.projectorName,
               initialStatus: projector.status,
               initialLocation: projector.location,
-              initialLastIssuedTo: projector.lastIssuedTo,
-              initialLastIssuedDate: projector.lastIssuedDate,
               initialNotes: projector.notes,
+              isEditing: true,
             ),
           ),
         )
@@ -806,7 +805,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
                 ),
               );
 
-              // Automatically scan the newly added projector after a short delay
+              // Automatically scan the updated projector after a short delay
               Future.delayed(const Duration(seconds: 2), () {
                 if (mounted) {
                   _processManualEntryForNewProjector(projector.serialNumber);

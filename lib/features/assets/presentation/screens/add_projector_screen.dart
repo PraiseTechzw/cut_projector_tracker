@@ -48,11 +48,28 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
   @override
   void initState() {
     super.initState();
-    _statusController.text = _selectedStatus;
 
-    // Pre-fill serial number if provided
+    // Pre-fill fields if provided (for editing)
     if (widget.initialSerialNumber != null) {
       _serialNumberController.text = widget.initialSerialNumber!;
+    }
+    if (widget.initialModelName != null) {
+      _modelNameController.text = widget.initialModelName!;
+    }
+    if (widget.initialProjectorName != null) {
+      _projectorNameController.text = widget.initialProjectorName!;
+    }
+    if (widget.initialStatus != null) {
+      _selectedStatus = widget.initialStatus!;
+      _statusController.text = widget.initialStatus!;
+    } else {
+      _statusController.text = _selectedStatus;
+    }
+    if (widget.initialLocation != null) {
+      _locationController.text = widget.initialLocation!;
+    }
+    if (widget.initialNotes != null) {
+      _notesController.text = widget.initialNotes!;
     }
 
     // Initialize scanner when the screen loads
@@ -80,7 +97,7 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
         appBar: AppBar(
-          title: const Text('Add Projector'),
+          title: Text(widget.isEditing ? 'Edit Projector' : 'Add Projector'),
           backgroundColor: AppTheme.primaryColor,
           foregroundColor: Colors.white,
           elevation: 0,
