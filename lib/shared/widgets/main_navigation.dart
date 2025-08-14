@@ -38,24 +38,15 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       icon: Icon(Icons.add_circle_outline),
       label: 'Issue',
     ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.undo),
-      label: 'Return',
-    ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.inventory),
-      label: 'Assets',
-    ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.history),
-      label: 'History',
-    ),
+    const BottomNavigationBarItem(icon: Icon(Icons.undo), label: 'Return'),
+    const BottomNavigationBarItem(icon: Icon(Icons.inventory), label: 'Assets'),
+    const BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
   ];
 
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_getAppBarTitle()),
@@ -100,7 +91,9 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                           children: [
                             Text(
                               currentUser.email ?? 'Unknown User',
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             Text(
                               'Staff Member',
@@ -209,9 +202,18 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
           children: [
             _buildProfileRow('Email', currentUser.email ?? 'N/A'),
             _buildProfileRow('User ID', currentUser.uid),
-            _buildProfileRow('Email Verified', currentUser.emailVerified ? 'Yes' : 'No'),
-            _buildProfileRow('Account Created', _formatDate(currentUser.metadata.creationTime)),
-            _buildProfileRow('Last Sign In', _formatDate(currentUser.metadata.lastSignInTime)),
+            _buildProfileRow(
+              'Email Verified',
+              currentUser.emailVerified ? 'Yes' : 'No',
+            ),
+            _buildProfileRow(
+              'Account Created',
+              _formatDate(currentUser.metadata.creationTime),
+            ),
+            _buildProfileRow(
+              'Last Sign In',
+              _formatDate(currentUser.metadata.lastSignInTime),
+            ),
           ],
         ),
         actions: [
@@ -246,7 +248,9 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               value,
               style: TextStyle(
                 color: AppTheme.textSecondary,
-                fontFamily: label == 'Email' || label == 'User ID' ? 'monospace' : null,
+                fontFamily: label == 'Email' || label == 'User ID'
+                    ? 'monospace'
+                    : null,
               ),
             ),
           ),
@@ -268,11 +272,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(
-              Icons.logout,
-              color: AppTheme.errorColor,
-              size: 28,
-            ),
+            Icon(Icons.logout, color: AppTheme.errorColor, size: 28),
             const SizedBox(width: 16),
             const Text('Confirm Logout'),
           ],
@@ -329,7 +329,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
 
       final authService = ref.read(firebaseAuthServiceProvider);
       await authService.signOut();
-      
+
       if (mounted) {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -340,7 +340,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
             duration: Duration(seconds: 1),
           ),
         );
-        
+
         // Navigate to signin
         context.go('/signin');
       }

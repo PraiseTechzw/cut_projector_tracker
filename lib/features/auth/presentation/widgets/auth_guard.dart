@@ -10,11 +10,7 @@ class AuthGuard extends ConsumerWidget {
   final Widget child;
   final bool requireAuth;
 
-  const AuthGuard({
-    super.key,
-    required this.child,
-    this.requireAuth = true,
-  });
+  const AuthGuard({super.key, required this.child, this.requireAuth = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,10 +19,10 @@ class AuthGuard extends ConsumerWidget {
     return authState.when(
       data: (user) {
         if (requireAuth && user == null) {
-          // User is not authenticated, redirect to login
+          // User is not authenticated, redirect to signin
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) {
-              context.go('/login');
+              context.go('/signin');
             }
           });
           return const _AuthLoadingScreen();
@@ -81,11 +77,7 @@ class _AuthLoadingScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.security,
-                size: 40,
-                color: Colors.white,
-              ),
+              child: const Icon(Icons.security, size: 40, color: Colors.white),
             ),
             const SizedBox(height: 24),
             Text(
@@ -98,9 +90,9 @@ class _AuthLoadingScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'Please wait while we verify your credentials...',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textSecondary,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -119,10 +111,7 @@ class _AuthErrorScreen extends StatelessWidget {
   final String error;
   final VoidCallback onRetry;
 
-  const _AuthErrorScreen({
-    required this.error,
-    required this.onRetry,
-  });
+  const _AuthErrorScreen({required this.error, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +160,9 @@ class _AuthErrorScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: AppTheme.surfaceColor,
-                    borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.borderRadius,
+                    ),
                     border: Border.all(color: AppTheme.textTertiary),
                   ),
                   child: Column(
@@ -199,10 +190,10 @@ class _AuthErrorScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    OutlinedButton(
-                      onPressed: () {
-                        context.go('/login');
-                      },
+                                          OutlinedButton(
+                        onPressed: () {
+                          context.go('/signin');
+                        },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
