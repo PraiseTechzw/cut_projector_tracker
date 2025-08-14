@@ -1,0 +1,710 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/services/firestore_service.dart';
+import '../../../../shared/models/projector.dart';
+import '../../../../shared/models/lecturer.dart';
+
+/// Screen for issuing projectors to lecturers
+class IssueProjectorScreen extends ConsumerStatefulWidget {
+  final Projector projector;
+
+  const IssueProjectorScreen({super.key, required this.projector});
+
+  @override
+  ConsumerState<IssueProjectorScreen> createState() =>
+      _IssueProjectorScreenState();
+}
+
+class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _searchController = TextEditingController();
+  final _notesController = TextEditingController();
+
+  bool _isLoading = false;
+  bool _isSearching = false;
+  String _searchQuery = '';
+  Lecturer? _selectedLecturer;
+  List<Lecturer> _searchResults = [];
+  List<Lecturer> _allLecturers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAllLecturers();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  /// Load all lecturers for search
+  Future<void> _loadAllLecturers() async {
+    try {
+      final firestoreService = ref.read(firestoreServiceProvider);
+      final lecturersStream = firestoreService.getLecturers();
+      final lecturers = await lecturersStream.first;
+      setState(() {
+        _allLecturers = lecturers;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading lecturers: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Search lecturers
+  void _searchLecturers(String query) {
+    setState(() {
+      _searchQuery = query;
+      _isSearching = query.isNotEmpty;
+    });
+
+    if (query.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _selectedLecturer = null;
+      });
+      return;
+    }
+
+    // Simple search implementation
+    final results = _allLecturers.where((lecturer) {
+      final searchLower = query.toLowerCase();
+      return lecturer.name.toLowerCase().contains(searchLower) ||
+          lecturer.department.toLowerCase().contains(searchLower) ||
+          lecturer.email.toLowerCase().contains(searchLower) ||
+          (lecturer.employeeId?.toLowerCase().contains(searchLower) ?? false);
+    }).toList();
+
+    setState(() {
+      _searchResults = results;
+    });
+  }
+
+  /// Select a lecturer
+  void _selectLecturer(Lecturer lecturer) {
+    setState(() {
+      _selectedLecturer = lecturer;
+      _searchQuery = lecturer.displayName;
+      _searchResults = [];
+      _isSearching = false;
+    });
+  }
+
+  /// Clear lecturer selection
+  void _clearLecturerSelection() {
+    setState(() {
+      _selectedLecturer = null;
+      _searchQuery = '';
+      _searchResults = [];
+      _isSearching = false;
+    });
+    _searchController.clear();
+  }
+
+  /// Issue projector to selected lecturer
+  Future<void> _issueProjector() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_selectedLecturer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a lecturer'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final firestoreService = ref.read(firestoreServiceProvider);
+
+      // Issue the projector using the existing method
+      await firestoreService.issueProjector(
+        projectorId: widget.projector.id,
+        lecturerId: _selectedLecturer!.id,
+        projectorSerialNumber: widget.projector.serialNumber,
+        lecturerName: _selectedLecturer!.name,
+      );
+
+      if (mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Projector "${widget.projector.projectorName}" issued to ${_selectedLecturer!.name} successfully!',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppTheme.statusAvailable,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+            ),
+          ),
+        );
+
+        // Navigate back
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('Error issuing projector: ${e.toString()}'),
+                ),
+              ],
+            ),
+            backgroundColor: AppTheme.errorColor,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        title: const Text('Issue Projector'),
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(AppConstants.largePadding),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Enhanced Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.send,
+                        color: AppTheme.accentColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Issue Projector',
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(
+                                  color: AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                          Text(
+                            'Assign projector to a lecturer',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: AppTheme.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Projector Information Section
+                _buildProjectorInfoSection(),
+                const SizedBox(height: 24),
+
+                // Lecturer Selection Section
+                _buildLecturerSelectionSection(),
+                const SizedBox(height: 24),
+
+                // Notes Section
+                _buildNotesSection(),
+                const SizedBox(height: 32),
+
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primaryColor,
+                          side: BorderSide(
+                            color: AppTheme.primaryColor,
+                            width: 1.5,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppConstants.borderRadius,
+                            ),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: (_isLoading || _selectedLecturer == null)
+                            ? null
+                            : _issueProjector,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _selectedLecturer != null
+                              ? AppTheme.accentColor
+                              : AppTheme.textTertiary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppConstants.borderRadius,
+                            ),
+                          ),
+                          elevation: 4,
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Issue Projector',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build projector information section
+  Widget _buildProjectorInfoSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.qr_code, color: AppTheme.primaryColor, size: 20),
+              const SizedBox(width: 12),
+              Text(
+                'Projector Information',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppTheme.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildInfoRow('Serial Number', widget.projector.serialNumber),
+          const SizedBox(height: 8),
+          _buildInfoRow('Model', widget.projector.modelName),
+          const SizedBox(height: 8),
+          _buildInfoRow('Name', widget.projector.projectorName),
+          if (widget.projector.location != null &&
+              widget.projector.location!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _buildInfoRow('Location', widget.projector.location!),
+          ],
+          const SizedBox(height: 8),
+          _buildInfoRow('Current Status', widget.projector.status),
+        ],
+      ),
+    );
+  }
+
+  /// Build lecturer selection section
+  Widget _buildLecturerSelectionSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.person, size: 16, color: AppTheme.accentColor),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Select Lecturer',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              ' *',
+              style: TextStyle(
+                color: AppTheme.errorColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Search for a lecturer by name, department, or email',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+        ),
+        const SizedBox(height: 12),
+
+        // Search Field
+        TextFormField(
+          controller: _searchController,
+          onChanged: _searchLecturers,
+          decoration: InputDecoration(
+            hintText: 'Search lecturers...',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    onPressed: _clearLecturerSelection,
+                    icon: const Icon(Icons.clear),
+                  )
+                : null,
+            filled: true,
+            fillColor: AppTheme.backgroundColor,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(
+                color: AppTheme.textTertiary.withValues(alpha: 0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(
+                color: AppTheme.textTertiary.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(color: AppTheme.accentColor, width: 2),
+            ),
+          ),
+        ),
+
+        // Search Results
+        if (_isSearching && _searchResults.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 200),
+            decoration: BoxDecoration(
+              color: AppTheme.backgroundColor,
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              border: Border.all(
+                color: AppTheme.textTertiary.withValues(alpha: 0.3),
+              ),
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: _searchResults.length,
+              itemBuilder: (context, index) {
+                final lecturer = _searchResults[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppTheme.accentColor.withValues(
+                      alpha: 0.1,
+                    ),
+                    child: Text(
+                      lecturer.name[0].toUpperCase(),
+                      style: TextStyle(
+                        color: AppTheme.accentColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    lecturer.name,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(lecturer.department),
+                  trailing: Text(
+                    lecturer.email,
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                  onTap: () => _selectLecturer(lecturer),
+                );
+              },
+            ),
+          ),
+        ],
+
+        // Selected Lecturer Display
+        if (_selectedLecturer != null) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.accentColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              border: Border.all(
+                color: AppTheme.accentColor.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppTheme.accentColor,
+                  child: Text(
+                    _selectedLecturer!.name[0].toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _selectedLecturer!.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        _selectedLecturer!.department,
+                        style: TextStyle(color: AppTheme.textSecondary),
+                      ),
+                      Text(
+                        _selectedLecturer!.email,
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: _clearLecturerSelection,
+                  icon: const Icon(Icons.close),
+                  color: AppTheme.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        // No Results Message
+        if (_isSearching &&
+            _searchResults.isEmpty &&
+            _searchQuery.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.textTertiary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.search_off, color: AppTheme.textSecondary, size: 20),
+                const SizedBox(width: 12),
+                Text(
+                  'No lecturers found matching "$_searchQuery"',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Build notes section
+  Widget _buildNotesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.note, size: 16, color: AppTheme.primaryColor),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Additional Notes',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Optional: Add any special instructions or notes',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _notesController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: 'Enter any additional notes...',
+            filled: true,
+            fillColor: AppTheme.backgroundColor,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(
+                color: AppTheme.textTertiary.withValues(alpha: 0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(
+                color: AppTheme.textTertiary.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build info row
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
