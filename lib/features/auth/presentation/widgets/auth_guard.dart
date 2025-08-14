@@ -190,10 +190,10 @@ class _AuthErrorScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                                          OutlinedButton(
-                        onPressed: () {
-                          context.go('/signin');
-                        },
+                    OutlinedButton(
+                      onPressed: () {
+                        context.go('/signin');
+                      },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
