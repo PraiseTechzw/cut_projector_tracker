@@ -5,31 +5,41 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firebase_auth_service.dart';
 
-/// Sign in screen for staff authentication
-class SignInScreen extends ConsumerStatefulWidget {
-  const SignInScreen({super.key});
+/// Sign up screen for new staff registration
+class SignUpScreen extends ConsumerStatefulWidget {
+  const SignUpScreen({super.key});
 
   @override
-  ConsumerState<SignInScreen> createState() => _SignInScreenState();
+  ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignInScreenState extends ConsumerState<SignInScreen> {
+class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _departmentController = TextEditingController();
+  final _employeeIdController = TextEditingController();
+  
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   String? _errorMessage;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _departmentController.dispose();
+    _employeeIdController.dispose();
     super.dispose();
   }
 
-  /// Handle sign in form submission
-  Future<void> _handleSignIn() async {
+  /// Handle sign up form submission
+  Future<void> _handleSignUp() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -39,26 +49,31 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
     try {
       final authService = ref.read(firebaseAuthServiceProvider);
-      await authService.signInWithEmailAndPassword(
+      
+      // Create user account
+      final userCredential = await authService.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
+      // TODO: Save additional user data to Firestore (name, department, employee ID)
+      // This would typically be done in a separate service or after user creation
       
       if (mounted) {
-        // Show success message before navigation
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Sign in successful!'),
+            content: Text('Account created successfully! Please sign in.'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 1),
+            duration: Duration(seconds: 3),
           ),
         );
         
-        // Navigate after a brief delay
-        Future.delayed(const Duration(milliseconds: 500), () {
+        // Navigate to sign in screen
+        Future.delayed(const Duration(milliseconds: 1000), () {
           if (mounted) {
-            context.go('/home');
+            context.go('/signin');
           }
         });
       }
@@ -97,6 +112,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        title: const Text('Create Account'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: AppTheme.textPrimary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/signin'),
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -109,12 +134,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 children: [
                   // App Logo
                   Container(
-                    width: 100,
-                    height: 100,
-                    margin: const EdgeInsets.only(bottom: 32),
+                    width: 80,
+                    height: 80,
+                    margin: const EdgeInsets.only(bottom: 24),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(25),
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
                           color: AppTheme.primaryColor.withOpacity(0.3),
@@ -124,16 +149,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       ],
                     ),
                     child: const Icon(
-                      Icons.video_camera_front,
-                      size: 50,
+                      Icons.person_add,
+                      size: 40,
                       color: Colors.white,
                     ),
                   ),
 
                   // Welcome Text
                   Text(
-                    'Welcome Back',
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    'Create Your Account',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: AppTheme.textPrimary,
                       fontWeight: FontWeight.bold,
                     ),
@@ -143,14 +168,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   const SizedBox(height: 8),
                   
                   Text(
-                    'Sign in to access the projector tracker',
+                    'Join the CUT Projector Tracker system',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppTheme.textSecondary,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 32),
 
                   // Error Message Display
                   if (_errorMessage != null) ...[
@@ -198,6 +223,72 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ),
                   ],
 
+                  // Full Name Field
+                  TextFormField(
+                    controller: _nameController,
+                    textInputAction: TextInputAction.next,
+                    enabled: !_isLoading,
+                    decoration: const InputDecoration(
+                      labelText: 'Full Name',
+                      prefixIcon: Icon(Icons.person_outline),
+                      hintText: 'Enter your full name',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your full name';
+                      }
+                      if (value.trim().split(' ').length < 2) {
+                        return 'Please enter your full name (first and last name)';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Department Field
+                  TextFormField(
+                    controller: _departmentController,
+                    textInputAction: TextInputAction.next,
+                    enabled: !_isLoading,
+                    decoration: const InputDecoration(
+                      labelText: 'Department',
+                      prefixIcon: Icon(Icons.business_outlined),
+                      hintText: 'Enter your department',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your department';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Employee ID Field
+                  TextFormField(
+                    controller: _employeeIdController,
+                    textInputAction: TextInputAction.next,
+                    enabled: !_isLoading,
+                    decoration: const InputDecoration(
+                      labelText: 'Employee ID',
+                      prefixIcon: Icon(Icons.badge_outlined),
+                      hintText: 'Enter your employee ID',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your employee ID';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
                   // Email Field
                   TextFormField(
                     controller: _emailController,
@@ -221,18 +312,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     },
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
                   // Password Field
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
+                    textInputAction: TextInputAction.next,
                     enabled: !_isLoading,
                     decoration: InputDecoration(
                       labelText: 'Password',
                       prefixIcon: const Icon(Icons.lock_outlined),
-                      hintText: 'Enter your password',
+                      hintText: 'Create a password',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -247,10 +338,48 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
+                        return 'Please enter a password';
                       }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
+                      if (value.length < 8) {
+                        return 'Password must be at least 8 characters';
+                      }
+                      if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
+                        return 'Password must contain uppercase, lowercase, and number';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Confirm Password Field
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    textInputAction: TextInputAction.done,
+                    enabled: !_isLoading,
+                    decoration: InputDecoration(
+                      labelText: 'Confirm Password',
+                      prefixIcon: const Icon(Icons.lock_outlined),
+                      hintText: 'Confirm your password',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: _isLoading ? null : () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please confirm your password';
+                      }
+                      if (value != _passwordController.text) {
+                        return 'Passwords do not match';
                       }
                       return null;
                     },
@@ -258,9 +387,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
                   const SizedBox(height: 32),
 
-                  // Sign In Button
+                  // Sign Up Button
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _handleSignIn,
+                    onPressed: _isLoading ? null : _handleSignUp,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -277,7 +406,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             ),
                           )
                         : const Text(
-                            'Sign In',
+                            'Create Account',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -287,22 +416,22 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Sign Up Link
+                  // Sign In Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Don't have an account? ",
+                        'Already have an account? ',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppTheme.textSecondary,
                         ),
                       ),
                       TextButton(
                         onPressed: _isLoading ? null : () {
-                          context.go('/signup');
+                          context.go('/signin');
                         },
                         child: Text(
-                          'Sign Up',
+                          'Sign In',
                           style: TextStyle(
                             color: AppTheme.primaryColor,
                             fontWeight: FontWeight.w600,
@@ -310,29 +439,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         ),
                       ),
                     ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Forgot Password Link
-                  TextButton(
-                    onPressed: _isLoading ? null : () {
-                      // TODO: Implement forgot password functionality
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Forgot password functionality coming soon'),
-                          backgroundColor: AppTheme.primaryColor,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                    child: Text(
-                      'Forgot Password?',
-                      style: TextStyle(
-                        color: AppTheme.textSecondary,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
                   ),
                 ],
               ),

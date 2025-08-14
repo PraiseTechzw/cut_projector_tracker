@@ -14,129 +14,328 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
+    with TickerProviderStateMixin {
+  late AnimationController _logoAnimationController;
+  late AnimationController _textAnimationController;
+  late AnimationController _loadingAnimationController;
+  
+  late Animation<double> _logoFadeAnimation;
+  late Animation<double> _logoScaleAnimation;
+  late Animation<double> _textFadeAnimation;
+  late Animation<double> _textSlideAnimation;
+  late Animation<double> _loadingRotationAnimation;
+  
+  bool _isInitialized = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(seconds: 2),
+    _initializeAnimations();
+    _startAnimations();
+  }
+
+  void _initializeAnimations() {
+    // Logo animations
+    _logoAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
+    _logoFadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
     ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeIn,
+      parent: _logoAnimationController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
     ));
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.8,
+    _logoScaleAnimation = Tween<double>(
+      begin: 0.3,
       end: 1.0,
     ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.elasticOut,
+      parent: _logoAnimationController,
+      curve: const Interval(0.2, 0.8, curve: Curves.elasticOut),
     ));
 
-    _animationController.forward();
+    // Text animations
+    _textAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
 
-    // Navigate after animation completes
-    Future.delayed(const Duration(seconds: 3), () {
+    _textFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _textAnimationController,
+      curve: const Interval(0.0, 0.8, curve: Curves.easeIn),
+    ));
+
+    _textSlideAnimation = Tween<double>(
+      begin: 30.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _textAnimationController,
+      curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
+    ));
+
+    // Loading animation
+    _loadingAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+
+    _loadingRotationAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _loadingAnimationController,
+      curve: Curves.linear,
+    ));
+  }
+
+  void _startAnimations() async {
+    // Start logo animation
+    await _logoAnimationController.forward();
+    
+    // Start text animation
+    await _textAnimationController.forward();
+    
+    // Start loading animation
+    _loadingAnimationController.repeat();
+    
+    // Wait a bit then check auth
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
       _checkAuthAndNavigate();
-    });
+    }
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _logoAnimationController.dispose();
+    _textAnimationController.dispose();
+    _loadingAnimationController.dispose();
     super.dispose();
   }
 
   /// Check authentication state and navigate accordingly
-  void _checkAuthAndNavigate() {
-    final user = ref.read(currentUserProvider);
-    if (user != null) {
-      context.go('/home');
-    } else {
-      context.go('/login');
+  Future<void> _checkAuthAndNavigate() async {
+    try {
+      setState(() {
+        _isInitialized = true;
+      });
+
+      // Wait a bit for Firebase to initialize
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      if (mounted) {
+        final user = ref.read(currentUserProvider);
+        if (user != null) {
+          _navigateToHome();
+        } else {
+          _navigateToLogin();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to initialize app: ${e.toString()}';
+        });
+        
+        // Show error and retry option
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) {
+          _navigateToLogin();
+        }
+      }
     }
+  }
+
+  void _navigateToHome() {
+    context.go('/home');
+  }
+
+  void _navigateToLogin() {
+    context.go('/login');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // App Logo/Icon
-                    Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primaryColor.withOpacity(0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo Section
+              AnimatedBuilder(
+                animation: _logoAnimationController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _logoFadeAnimation,
+                    child: ScaleTransition(
+                      scale: _logoScaleAnimation,
+                      child: Container(
+                        width: 140,
+                        height: 140,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor,
+                          borderRadius: BorderRadius.circular(35),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryColor.withOpacity(0.4),
+                              blurRadius: 25,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.video_camera_front,
+                          size: 70,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 40),
+
+              // App Name
+              AnimatedBuilder(
+                animation: _textAnimationController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _textFadeAnimation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.3),
+                        end: Offset.zero,
+                      ).animate(_textSlideAnimation),
+                      child: Text(
+                        AppConstants.appName,
+                        style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // App Description
+              AnimatedBuilder(
+                animation: _textAnimationController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _textFadeAnimation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.3),
+                        end: Offset.zero,
+                      ).animate(_textSlideAnimation),
+                      child: Text(
+                        'Track projector issuance and returns',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppTheme.textSecondary,
+                          fontSize: 18,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 60),
+
+              // Loading Section
+              if (_isInitialized) ...[
+                AnimatedBuilder(
+                  animation: _loadingAnimationController,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle: _loadingRotationAnimation.value * 2 * 3.14159,
+                      child: const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppTheme.primaryColor,
+                        ),
+                        strokeWidth: 3,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Initializing...',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 20),
+                Text(
+                  'Loading...',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+
+              // Error Message
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 40),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.symmetric(horizontal: 32),
+                  decoration: BoxDecoration(
+                    color: AppTheme.errorColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                    border: Border.all(color: AppTheme.errorColor),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: AppTheme.errorColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(
+                            color: AppTheme.errorColor,
+                            fontSize: 14,
                           ),
-                        ],
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.video_camera_front,
-                        size: 60,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    // App Name
-                    Text(
-                      AppConstants.appName,
-                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        color: AppTheme.primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // App Description
-                    Text(
-                      'Track projector issuance and returns',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 48),
-                    
-                    // Loading indicator
-                    const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppTheme.primaryColor,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+              ],
+
+              // Version Info
+              const SizedBox(height: 60),
+              Text(
+                'Version 1.0.0',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textTertiary,
                 ),
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );

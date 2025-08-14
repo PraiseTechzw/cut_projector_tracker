@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "900623368565",
+    "project_id": "cut-app-44776",
+    "storage_bucket": "cut-app-44776.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:900623368565:android:8fcb9885fabce954b4d33c",
+        "android_client_info": {
+          "package_name": "com.example.cut_projector_tracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAJEJAEeJyk8CVVnRHOs_k-CUFDynZV64"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
