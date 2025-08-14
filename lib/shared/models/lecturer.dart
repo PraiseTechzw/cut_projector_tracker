@@ -6,6 +6,7 @@ class Lecturer {
   final String name;
   final String department;
   final String email;
+  final String? phoneNumber;
   final String? employeeId;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -15,6 +16,7 @@ class Lecturer {
     required this.name,
     required this.department,
     required this.email,
+    this.phoneNumber,
     this.employeeId,
     required this.createdAt,
     required this.updatedAt,
