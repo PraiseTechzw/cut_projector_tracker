@@ -5,6 +5,8 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../shared/models/projector.dart';
+import '../../../issuance/presentation/screens/issue_projector_screen.dart';
+import '../../../returns/presentation/screens/return_projector_screen.dart';
 
 /// Screen for scanning projector barcodes/QR codes
 class ScanningScreen extends ConsumerStatefulWidget {
@@ -21,6 +23,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
   bool _isLoading = false;
   bool _hasError = false;
   String _errorMessage = '';
+  final _manualEntryController = TextEditingController();
 
   @override
   void initState() {
@@ -31,6 +34,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
   @override
   void dispose() {
     _scannerController?.dispose();
+    _manualEntryController.dispose();
     super.dispose();
   }
 
@@ -129,6 +133,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() {
+          _scannedCode = null;
           _isScanning = true;
         });
         // Restart scanner if it was stopped
@@ -137,6 +142,120 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
         }
       }
     });
+  }
+
+  /// Process manual entry
+  Future<void> _processManualEntry() async {
+    final serialNumber = _manualEntryController.text.trim();
+    if (serialNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a serial number'),
+          backgroundColor: AppTheme.warningColor,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _scannedCode = serialNumber;
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = '';
+    });
+
+    try {
+      final firestoreService = ref.read(firestoreServiceProvider);
+      final projector = await firestoreService.getProjectorBySerialNumber(
+        serialNumber,
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (projector != null) {
+        _showProjectorInfo(projector);
+      } else {
+        _showProjectorNotFound();
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'Failed to fetch projector data: $e';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppTheme.errorColor,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+
+    _manualEntryController.clear();
+  }
+
+  /// Show manual entry dialog
+  void _showManualEntryDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.keyboard, color: AppTheme.accentColor, size: 24),
+            const SizedBox(width: 8),
+            const Text('Manual Entry'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Enter the projector serial number manually:',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _manualEntryController,
+              decoration: InputDecoration(
+                labelText: 'Serial Number',
+                hintText: 'e.g., PROJ001',
+                prefixIcon: const Icon(Icons.qr_code),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                ),
+                filled: true,
+                fillColor: AppTheme.backgroundColor,
+              ),
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _processManualEntry(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _manualEntryController.clear();
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: _processManualEntry,
+            child: const Text('Search'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Show projector information dialog
@@ -577,15 +696,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
-                          // TODO: Navigate to manual entry screen
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Manual entry feature coming soon!',
-                              ),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
+                          _showManualEntryDialog();
                         },
                         icon: const Icon(Icons.keyboard),
                         label: const Text('Manual Entry'),
