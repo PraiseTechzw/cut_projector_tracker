@@ -32,6 +32,10 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
   void initState() {
     super.initState();
     _statusController.text = _selectedStatus;
+    // Initialize scanner when the screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeScanner();
+    });
   }
 
   @override
@@ -473,27 +477,17 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
         // Control Buttons
         Padding(
           padding: const EdgeInsets.all(AppConstants.defaultPadding),
-          child: Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _isScanning ? _stopScanner : _startScanner,
-                  icon: Icon(_isScanning ? Icons.stop : Icons.play_arrow),
-                  label: Text(_isScanning ? 'Stop Scanner' : 'Start Scanner'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isScanning ? AppTheme.errorColor : AppTheme.accentColor,
-                  ),
-                ),
+          child: SizedBox(
+            width: double.infinity,
+            height: AppConstants.buttonHeight,
+            child: ElevatedButton.icon(
+              onPressed: _isScanning ? _stopScanner : _startScanner,
+              icon: Icon(_isScanning ? Icons.stop : Icons.play_arrow),
+              label: Text(_isScanning ? 'Stop Scanner' : 'Start Scanner'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isScanning ? AppTheme.errorColor : AppTheme.accentColor,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _switchToManualTab(),
-                  icon: const Icon(Icons.keyboard),
-                  label: const Text('Manual Entry'),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ],
@@ -507,7 +501,7 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
       facing: CameraFacing.back,
       torchEnabled: false,
     );
-    _startScanner();
+    // Don't start automatically, let user control with button
   }
 
   /// Start scanner
@@ -559,11 +553,6 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
         DefaultTabController.of(context).animateTo(0);
       }
     });
-  }
-
-  /// Switch to manual tab
-  void _switchToManualTab() {
-    DefaultTabController.of(context).animateTo(0);
   }
 
   /// Submit the form to add the projector
