@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:riverpod/riverpod.dart';
 
 part 'firebase_auth_service.g.dart';
 
@@ -61,20 +60,20 @@ class FirebaseAuthService {
 
 /// Provider for FirebaseAuthService
 @riverpod
-FirebaseAuthService firebaseAuthService(Ref ref) {
+FirebaseAuthService firebaseAuthService(FirebaseAuthServiceRef ref) {
   return FirebaseAuthService();
 }
 
 /// Provider for current user
 @riverpod
-Stream<User?> authStateChanges(Ref ref) {
+Stream<User?> authStateChanges(AuthStateChangesRef ref) {
   final authService = ref.watch(firebaseAuthServiceProvider);
   return authService.authStateChanges;
 }
 
 /// Provider for current user (nullable)
 @riverpod
-User? currentUser(Ref ref) {
+User? currentUser(CurrentUserRef ref) {
   final authService = ref.watch(firebaseAuthServiceProvider);
   return authService.currentUser;
 }

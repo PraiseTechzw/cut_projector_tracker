@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:riverpod/riverpod.dart';
 import '../../shared/models/projector.dart';
 import '../../shared/models/lecturer.dart';
 import '../../shared/models/transaction.dart';
@@ -126,12 +125,12 @@ class FirestoreService {
     try {
       final nameQuery = await _lecturersCollection
           .where('name', isGreaterThanOrEqualTo: query)
-          .where('name', isLessThan: query + '\uf8ff')
+          .where('name', isLessThan: '$query\uf8ff')
           .get();
 
       final deptQuery = await _lecturersCollection
           .where('department', isGreaterThanOrEqualTo: query)
-          .where('department', isLessThan: query + '\uf8ff')
+          .where('department', isLessThan: '$query\uf8ff')
           .get();
 
       final allDocs = {...nameQuery.docs, ...deptQuery.docs};
@@ -306,34 +305,34 @@ class FirestoreService {
 
 /// Provider for FirestoreService
 @riverpod
-FirestoreService firestoreService(Ref ref) {
+FirestoreService firestoreService(FirestoreServiceRef ref) {
   return FirestoreService();
 }
 
 /// Provider for projectors stream
 @riverpod
-Stream<List<Projector>> projectorsStream(Ref ref) {
+Stream<List<Projector>> projectorsStream(ProjectorsStreamRef ref) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   return firestoreService.getProjectors();
 }
 
 /// Provider for lecturers stream
 @riverpod
-Stream<List<Lecturer>> lecturersStream(Ref ref) {
+Stream<List<Lecturer>> lecturersStream(LecturersStreamRef ref) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   return firestoreService.getLecturers();
 }
 
 /// Provider for transactions stream
 @riverpod
-Stream<List<ProjectorTransaction>> transactionsStream(Ref ref) {
+Stream<List<ProjectorTransaction>> transactionsStream(TransactionsStreamRef ref) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   return firestoreService.getTransactions();
 }
 
 /// Provider for active transactions stream
 @riverpod
-Stream<List<ProjectorTransaction>> activeTransactionsStream(Ref ref) {
+Stream<List<ProjectorTransaction>> activeTransactionsStream(ActiveTransactionsStreamRef ref) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   return firestoreService.getActiveTransactions();
 }
