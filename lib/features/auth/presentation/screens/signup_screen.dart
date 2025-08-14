@@ -56,6 +56,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
   Future<void> _handleSignUp() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Start confetti animation
+    _confettiController.play();
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -125,16 +128,41 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
           onPressed: () => context.go('/signin'),
         ),
       ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppConstants.largePadding),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+      body: Stack(
+        children: [
+          // Confetti overlay
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirection: pi / 2,
+              maxBlastForce: 5,
+              minBlastForce: 2,
+              emissionFrequency: 0.05,
+              numberOfParticles: 30,
+              gravity: 0.1,
+              colors: [
+                AppTheme.primaryColor,
+                AppTheme.secondaryColor,
+                Colors.orange,
+                Colors.pink,
+                Colors.purple,
+                Colors.teal,
+              ],
+            ),
+          ),
+          
+          // Main content
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppConstants.largePadding),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                   // App Logo
                   Container(
                     width: 80,
@@ -468,7 +496,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
