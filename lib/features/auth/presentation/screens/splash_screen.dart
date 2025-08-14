@@ -158,7 +158,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   void _navigateToLogin() {
-    context.go('/login');
+    context.go('/signin');
   }
 
   @override

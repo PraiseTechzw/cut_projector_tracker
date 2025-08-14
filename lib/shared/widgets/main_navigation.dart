@@ -341,8 +341,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
           ),
         );
         
-        // Navigate to login
-        context.go('/login');
+        // Navigate to signin
+        context.go('/signin');
       }
     } catch (e) {
       if (mounted) {
