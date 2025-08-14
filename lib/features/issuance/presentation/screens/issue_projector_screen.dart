@@ -21,9 +21,17 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
   final _formKey = GlobalKey<FormState>();
   final _searchController = TextEditingController();
   final _notesController = TextEditingController();
+  
+  // New lecturer form controllers
+  final _newLecturerFormKey = GlobalKey<FormState>();
+  final _newLecturerNameController = TextEditingController();
+  final _newLecturerDepartmentController = TextEditingController();
+  final _newLecturerEmailController = TextEditingController();
+  final _newLecturerEmployeeIdController = TextEditingController();
 
   bool _isLoading = false;
   bool _isSearching = false;
+  bool _showAddLecturerForm = false;
   String _searchQuery = '';
   Lecturer? _selectedLecturer;
   List<Lecturer> _searchResults = [];
@@ -39,6 +47,10 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
   void dispose() {
     _searchController.dispose();
     _notesController.dispose();
+    _newLecturerNameController.dispose();
+    _newLecturerDepartmentController.dispose();
+    _newLecturerEmailController.dispose();
+    _newLecturerEmployeeIdController.dispose();
     super.dispose();
   }
 

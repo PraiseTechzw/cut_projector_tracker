@@ -7,6 +7,7 @@ import '../../../../shared/models/projector.dart';
 import 'add_projector_screen.dart';
 import 'edit_projector_screen.dart';
 import '../../../issuance/presentation/screens/issue_projector_screen.dart';
+import '../../../returns/presentation/screens/return_projector_screen.dart';
 
 /// Screen for viewing asset register
 class AssetsScreen extends ConsumerStatefulWidget {
@@ -570,27 +571,60 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: projector.isAvailable
-                        ? () => _issueProjector(context, projector)
-                        : null,
-                    icon: const Icon(Icons.send),
-                    label: const Text('Issue'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: projector.isAvailable
-                          ? AppTheme.accentColor
-                          : AppTheme.textTertiary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppConstants.borderRadius,
+                if (projector.isAvailable)
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _issueProjector(context, projector),
+                      icon: const Icon(Icons.send),
+                      label: const Text('Issue'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.accentColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.borderRadius,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                else if (projector.isIssued)
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _returnProjector(context, projector),
+                      icon: const Icon(Icons.assignment_return),
+                      label: const Text('Return'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.statusAvailable,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.borderRadius,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: null,
+                      icon: const Icon(Icons.info),
+                      label: const Text('Maintenance'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.textTertiary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.borderRadius,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ],
@@ -793,6 +827,15 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => IssueProjectorScreen(projector: projector),
+      ),
+    );
+  }
+
+  /// Return projector
+  void _returnProjector(BuildContext context, Projector projector) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ReturnProjectorScreen(projector: projector),
       ),
     );
   }
