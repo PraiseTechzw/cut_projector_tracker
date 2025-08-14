@@ -75,6 +75,9 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                   case 'profile':
                     _showUserProfile();
                     break;
+                  case 'admin':
+                    _navigateToAdminDashboard();
+                    break;
                   case 'logout':
                     _showLogoutConfirmation();
                     break;
@@ -108,6 +111,20 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                           ],
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: 'admin',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.admin_panel_settings,
+                        color: AppTheme.accentColor,
+                      ),
+                      SizedBox(width: 12),
+                      Text('Admin Dashboard'),
                     ],
                   ),
                 ),
@@ -302,6 +319,17 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
             child: const Text('Logout'),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Navigate to admin dashboard
+  void _navigateToAdminDashboard() {
+    // TODO: Navigate to admin dashboard
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Admin Dashboard coming soon'),
+        backgroundColor: AppTheme.accentColor,
       ),
     );
   }
