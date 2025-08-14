@@ -5,7 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
-import 'features/auth/presentation/screens/login_screen.dart';
+import 'features/auth/presentation/screens/signin_screen.dart';
+import 'features/auth/presentation/screens/signup_screen.dart';
 import 'features/auth/presentation/screens/splash_screen.dart';
 import 'features/auth/presentation/widgets/auth_guard.dart';
 import 'shared/widgets/main_navigation.dart';
@@ -38,9 +39,14 @@ final _router = GoRouter(
     // Public routes (no auth required)
     GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
     GoRoute(
-      path: '/login',
+      path: '/signin',
       builder: (context, state) =>
-          const AuthGuard(requireAuth: false, child: LoginScreen()),
+          const AuthGuard(requireAuth: false, child: SignInScreen()),
+    ),
+    GoRoute(
+      path: '/signup',
+      builder: (context, state) =>
+          const AuthGuard(requireAuth: false, child: SignUpScreen()),
     ),
 
     // Protected routes (auth required)

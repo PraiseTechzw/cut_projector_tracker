@@ -28,6 +28,21 @@ class FirebaseAuthService {
     }
   }
 
+  /// Create user with email and password
+  Future<UserCredential> createUserWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      return await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
   /// Sign out
   Future<void> signOut() async {
     try {
@@ -52,6 +67,14 @@ class FirebaseAuthService {
         return 'Too many failed attempts. Please try again later.';
       case 'network-request-failed':
         return 'Network error. Please check your connection.';
+      case 'email-already-in-use':
+        return 'An account with this email already exists.';
+      case 'weak-password':
+        return 'Password is too weak. Please choose a stronger password.';
+      case 'operation-not-allowed':
+        return 'Email/password accounts are not enabled. Please contact support.';
+      case 'invalid-credential':
+        return 'Invalid credentials provided.';
       default:
         return 'Authentication failed: ${e.message}';
     }
