@@ -18,7 +18,6 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
   MobileScannerController? _scannerController;
   bool _isScanning = false;
   String? _scannedCode;
-  Projector? _scannedProjector;
   bool _isLoading = false;
   bool _hasError = false;
   String _errorMessage = '';
@@ -99,7 +98,6 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
       );
 
       setState(() {
-        _scannedProjector = projector;
         _isLoading = false;
       });
 
@@ -160,11 +158,24 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
           children: [
             _buildInfoRow('Serial Number', projector.serialNumber),
             const SizedBox(height: 12),
+            if (projector.modelName.isNotEmpty) ...[
+              _buildInfoRow('Model', projector.modelName),
+              const SizedBox(height: 12),
+            ],
+            if (projector.projectorName.isNotEmpty) ...[
+              _buildInfoRow('Name', projector.projectorName),
+              const SizedBox(height: 12),
+            ],
             _buildInfoRow(
               'Status',
               projector.status,
               statusColor: _getStatusColor(projector.status),
             ),
+            if (projector.location != null &&
+                projector.location!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildInfoRow('Location', projector.location!),
+            ],
             if (projector.lastIssuedTo != null) ...[
               const SizedBox(height: 12),
               _buildInfoRow('Last Issued To', projector.lastIssuedTo!),
@@ -175,6 +186,10 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
                 'Last Issued',
                 _formatDate(projector.lastIssuedDate!),
               ),
+            ],
+            if (projector.notes != null && projector.notes!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildInfoRow('Notes', projector.notes!),
             ],
           ],
         ),
@@ -306,7 +321,6 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
   void _resetScan() {
     setState(() {
       _scannedCode = null;
-      _scannedProjector = null;
       _hasError = false;
       _errorMessage = '';
     });
@@ -452,7 +466,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
               color: AppTheme.backgroundColor,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, -2),
                 ),
@@ -466,7 +480,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(AppConstants.defaultPadding),
                     decoration: BoxDecoration(
-                      color: AppTheme.errorColor.withOpacity(0.1),
+                      color: AppTheme.errorColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(
                         AppConstants.borderRadius,
                       ),
