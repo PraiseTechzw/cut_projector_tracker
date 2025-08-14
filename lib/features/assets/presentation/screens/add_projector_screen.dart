@@ -22,7 +22,7 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
   final _locationController = TextEditingController();
   final _notesController = TextEditingController();
   final _statusController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _isScanning = false;
   String _selectedStatus = AppConstants.statusAvailable;
@@ -55,442 +55,728 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
         appBar: AppBar(
           title: const Text('Add Projector'),
           backgroundColor: AppTheme.primaryColor,
           foregroundColor: Colors.white,
           elevation: 0,
-          bottom: const TabBar(
+          leading: IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back),
+          ),
+          bottom: TabBar(
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
             indicatorColor: Colors.white,
-            tabs: [
-              Tab(icon: Icon(Icons.keyboard), text: 'Manual Entry'),
+            tabs: const [
+              Tab(icon: Icon(Icons.edit_note), text: 'Manual Entry'),
               Tab(icon: Icon(Icons.qr_code_scanner), text: 'Scan Barcode'),
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _buildManualEntryForm(),
-            _buildScanForm(),
-          ],
-        ),
+        body: TabBarView(children: [_buildManualEntryForm(), _buildScanForm()]),
       ),
     );
   }
 
   /// Build manual entry form
   Widget _buildManualEntryForm() {
-    return Form(
-      key: _formKey,
-      child: ListView(
-        padding: const EdgeInsets.all(AppConstants.defaultPadding),
-        children: [
-          // Header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppConstants.largePadding),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-              border: Border.all(
-                color: AppTheme.primaryColor.withValues(alpha: 0.2),
-              ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.add_circle_outline,
-                  size: 64,
-                  color: AppTheme.primaryColor,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Add New Projector',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.w600,
+          ],
+        ),
+        padding: const EdgeInsets.all(AppConstants.largePadding),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Enhanced Form Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.edit_note,
+                      color: AppTheme.primaryColor,
+                      size: 24,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Enter the projector details below to add it to the system',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: AppConstants.largePadding),
-          
-          // Serial Number Field
-          TextFormField(
-            controller: _serialNumberController,
-            decoration: const InputDecoration(
-              labelText: 'Serial Number *',
-              hintText: 'Enter projector serial number',
-              prefixIcon: Icon(Icons.qr_code),
-              helperText: 'This should match the barcode/QR code on the projector',
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Serial number is required';
-              }
-              if (value.trim().length < 3) {
-                return 'Serial number must be at least 3 characters';
-              }
-              return null;
-            },
-            textCapitalization: TextCapitalization.characters,
-            style: const TextStyle(fontFamily: 'monospace'),
-          ),
-          
-          const SizedBox(height: AppConstants.defaultPadding),
-          
-          // Model Name Field
-          TextFormField(
-            controller: _modelNameController,
-            decoration: const InputDecoration(
-              labelText: 'Model Name *',
-              hintText: 'Enter projector model name',
-              prefixIcon: Icon(Icons.model_training),
-              helperText: 'e.g., Epson PowerLite, BenQ TH685P',
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Model name is required';
-              }
-              return null;
-            },
-          ),
-          
-          const SizedBox(height: AppConstants.defaultPadding),
-          
-          // Projector Name Field
-          TextFormField(
-            controller: _projectorNameController,
-            decoration: const InputDecoration(
-              labelText: 'Projector Name *',
-              hintText: 'Enter projector display name',
-              prefixIcon: Icon(Icons.label),
-              helperText: 'e.g., Lab A Projector, Conference Room 1',
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Projector name is required';
-              }
-              return null;
-            },
-          ),
-          
-          const SizedBox(height: AppConstants.defaultPadding),
-          
-          // Location Field
-          TextFormField(
-            controller: _locationController,
-            decoration: const InputDecoration(
-              labelText: 'Location',
-              hintText: 'Enter projector location',
-              prefixIcon: Icon(Icons.location_on),
-              helperText: 'e.g., Building A, Floor 2, Room 201',
-            ),
-          ),
-          
-          const SizedBox(height: AppConstants.defaultPadding),
-          
-          // Status Field
-          DropdownButtonFormField<String>(
-            value: _selectedStatus,
-            decoration: const InputDecoration(
-              labelText: 'Status *',
-              prefixIcon: Icon(Icons.info_outline),
-              helperText: 'Select the current status of the projector',
-            ),
-            items: [
-              DropdownMenuItem(
-                value: AppConstants.statusAvailable,
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: AppTheme.statusAvailable,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(AppConstants.statusAvailable),
-                  ],
-                ),
-              ),
-              DropdownMenuItem(
-                value: AppConstants.statusIssued,
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.send,
-                      color: AppTheme.statusIssued,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(AppConstants.statusIssued),
-                  ],
-                ),
-              ),
-              DropdownMenuItem(
-                value: AppConstants.statusMaintenance,
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.build,
-                      color: AppTheme.statusMaintenance,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(AppConstants.statusMaintenance),
-                  ],
-                ),
-              ),
-            ],
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _selectedStatus = value;
-                  _statusController.text = value;
-                });
-              }
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Status is required';
-              }
-              return null;
-            },
-          ),
-          
-          const SizedBox(height: AppConstants.defaultPadding),
-          
-          // Notes Field
-          TextFormField(
-            controller: _notesController,
-            decoration: const InputDecoration(
-              labelText: 'Notes',
-              hintText: 'Enter any additional notes',
-              prefixIcon: Icon(Icons.note),
-              helperText: 'Optional: Any special instructions or details',
-            ),
-            maxLines: 3,
-          ),
-          
-          const SizedBox(height: AppConstants.largePadding),
-          
-          // Submit Button
-          SizedBox(
-            width: double.infinity,
-            height: AppConstants.buttonHeight,
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _submitForm,
-              child: _isLoading
-                  ? const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        Text(
+                          'Projector Details',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        Text(
+                          'Enter the projector details below',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppTheme.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Enhanced Serial Number Field
+              _buildEnhancedFormField(
+                controller: _serialNumberController,
+                label: 'Serial Number',
+                hint: 'Enter projector serial number',
+                icon: Icons.qr_code,
+                helperText:
+                    'This should match the barcode/QR code on the projector',
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Serial number is required';
+                  }
+                  if (value.trim().length < 3) {
+                    return 'Serial number must be at least 3 characters';
+                  }
+                  return null;
+                },
+                textCapitalization: TextCapitalization.characters,
+                style: const TextStyle(fontFamily: 'monospace'),
+              ),
+              const SizedBox(height: 20),
+
+              // Enhanced Model Name Field
+              _buildEnhancedFormField(
+                controller: _modelNameController,
+                label: 'Model Name',
+                hint: 'Enter projector model name',
+                icon: Icons.model_training,
+                helperText: 'e.g., Epson PowerLite, BenQ TH685P',
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Model name is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // Enhanced Projector Name Field
+              _buildEnhancedFormField(
+                controller: _projectorNameController,
+                label: 'Projector Name',
+                hint: 'Enter projector display name',
+                icon: Icons.label,
+                helperText: 'e.g., Lab A Projector, Conference Room 1',
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Projector name is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // Enhanced Location Field
+              _buildEnhancedFormField(
+                controller: _locationController,
+                label: 'Location',
+                hint: 'Enter projector location',
+                icon: Icons.location_on,
+                helperText: 'e.g., Building A, Floor 2, Room 201',
+                validator: null, // Optional field
+              ),
+              const SizedBox(height: 20),
+
+              // Enhanced Status Field
+              _buildEnhancedDropdownField(),
+              const SizedBox(height: 20),
+
+              // Enhanced Notes Field
+              _buildEnhancedFormField(
+                controller: _notesController,
+                label: 'Notes',
+                hint: 'Enter any additional notes',
+                icon: Icons.note,
+                helperText: 'Optional: Any special instructions or details',
+                validator: null, // Optional field
+                maxLines: 3,
+              ),
+              const SizedBox(height: 32),
+
+              // Enhanced Action Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryColor,
+                        side: BorderSide(
+                          color: AppTheme.primaryColor,
+                          width: 1.5,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.borderRadius,
                           ),
                         ),
-                        SizedBox(width: 12),
-                        Text('Adding Projector...'),
-                      ],
-                    )
-                  : const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add),
-                        SizedBox(width: 8),
-                        Text('Add Projector'),
-                      ],
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-            ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _submitForm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.accentColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.borderRadius,
+                          ),
+                        ),
+                        elevation: 4,
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                          : const Text(
+                              'Add Projector',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          
-          const SizedBox(height: AppConstants.defaultPadding),
-          
-          // Cancel Button
-          SizedBox(
-            width: double.infinity,
-            height: AppConstants.buttonHeight,
-            child: OutlinedButton(
-              onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  /// Build enhanced form field
+  Widget _buildEnhancedFormField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    String? helperText,
+    String? Function(String?)? validator,
+    int maxLines = 1,
+    TextCapitalization? textCapitalization,
+    TextStyle? style,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 16, color: AppTheme.primaryColor),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (validator != null)
+              Text(
+                ' *',
+                style: TextStyle(
+                  color: AppTheme.errorColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (helperText != null) ...[
+          Text(
+            helperText,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 8),
+        ],
+        TextFormField(
+          controller: controller,
+          validator: validator,
+          maxLines: maxLines,
+          textCapitalization: textCapitalization ?? TextCapitalization.none,
+          style: style,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: AppTheme.textTertiary),
+            filled: true,
+            fillColor: AppTheme.backgroundColor,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(
+                color: AppTheme.textTertiary.withValues(alpha: 0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(
+                color: AppTheme.textTertiary.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(color: AppTheme.errorColor, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build enhanced dropdown field
+  Widget _buildEnhancedDropdownField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.info_outline,
+                size: 16,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Status',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              ' *',
+              style: TextStyle(
+                color: AppTheme.errorColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Select the current status of the projector',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _selectedStatus,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppTheme.backgroundColor,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(
+                color: AppTheme.textTertiary.withValues(alpha: 0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(
+                color: AppTheme.textTertiary.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+          ),
+          items: [
+            DropdownMenuItem(
+              value: AppConstants.statusAvailable,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: AppTheme.statusAvailable,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(AppConstants.statusAvailable),
+                ],
+              ),
+            ),
+            DropdownMenuItem(
+              value: AppConstants.statusIssued,
+              child: Row(
+                children: [
+                  Icon(Icons.send, color: AppTheme.statusIssued, size: 20),
+                  const SizedBox(width: 12),
+                  Text(AppConstants.statusIssued),
+                ],
+              ),
+            ),
+            DropdownMenuItem(
+              value: AppConstants.statusMaintenance,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.build,
+                    color: AppTheme.statusMaintenance,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(AppConstants.statusMaintenance),
+                ],
+              ),
+            ),
+          ],
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                _selectedStatus = value;
+                _statusController.text = value;
+              });
+            }
+          },
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Status is required';
+            }
+            return null;
+          },
+        ),
+      ],
     );
   }
 
   /// Build scan form
   Widget _buildScanForm() {
-    return Column(
-      children: [
-        // Header
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppConstants.largePadding),
-          decoration: BoxDecoration(
-            color: AppTheme.accentColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-            border: Border.all(
-              color: AppTheme.accentColor.withValues(alpha: 0.2),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                Icons.qr_code_scanner,
-                size: 64,
-                color: AppTheme.accentColor,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Scan Projector Barcode',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppTheme.accentColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Scan the barcode/QR code to automatically fill the form',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+          ],
         ),
-
-        const SizedBox(height: AppConstants.defaultPadding),
-
-        // Scanner View
-        Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: AppConstants.defaultPadding),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-              border: Border.all(color: AppTheme.accentColor, width: 2),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius - 2),
-              child: Stack(
-                children: [
-                  MobileScanner(
-                    controller: _scannerController,
-                    onDetect: _onBarcodeDetected,
-                    errorBuilder: (context, error, child) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: 64,
-                              color: AppTheme.errorColor,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Scanner Error',
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: AppTheme.errorColor,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              error.errorDetails?.message ?? 'Unknown error occurred',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _initializeScanner,
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+        padding: const EdgeInsets.all(AppConstants.largePadding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Enhanced Scan Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  
-                  // Scanning overlay
-                  if (_isScanning)
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppTheme.accentColor, width: 3),
+                  child: Icon(
+                    Icons.qr_code_scanner,
+                    color: AppTheme.accentColor,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Scan Projector Barcode',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: AppTheme.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
                       ),
-                      child: const Center(
-                        child: Column(
+                      Text(
+                        'Position the barcode within the scanner frame',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Enhanced Scanner Container
+            Container(
+              height: 300,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.accentColor.withValues(alpha: 0.3),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.accentColor.withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Stack(
+                  children: [
+                    // Scanner
+                    MobileScanner(
+                      controller: _scannerController,
+                      onDetect: _onBarcodeDetected,
+                      errorBuilder: (context, error, child) {
+                        return Container(
+                          color: AppTheme.errorColor.withValues(alpha: 0.1),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.error_outline,
+                                  size: 48,
+                                  color: AppTheme.errorColor,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Scanner Error',
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        color: AppTheme.errorColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  error.errorDetails?.message ??
+                                      'Unknown error occurred',
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(color: AppTheme.textSecondary),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  onPressed: _initializeScanner,
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('Retry'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryColor,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // Enhanced Scanning Overlay
+                    if (_isScanning)
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: AppTheme.accentColor,
+                            width: 3,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accentColor.withValues(
+                                alpha: 0.9,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                  strokeWidth: 3,
+                                ),
+                                SizedBox(height: 12),
+                                Text(
+                                  'Scanning...',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // Enhanced Scanner Controls
+                    Positioned(
+                      bottom: 16,
+                      left: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.qr_code_scanner,
-                              size: 64,
-                              color: Colors.white,
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'Position barcode within frame',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
+                            ElevatedButton.icon(
+                              onPressed: _isScanning
+                                  ? _stopScanner
+                                  : _startScanner,
+                              icon: Icon(
+                                _isScanning ? Icons.stop : Icons.play_arrow,
                               ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Scanning...',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 16,
+                              label: Text(
+                                _isScanning ? 'Stop Scanner' : 'Start Scanner',
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _isScanning
+                                    ? AppTheme.errorColor
+                                    : AppTheme.accentColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    AppConstants.borderRadius,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Enhanced Instructions
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: AppTheme.primaryColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Make sure the barcode is clearly visible and well-lit. The scanner will automatically detect and process the code.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
+          ],
         ),
-
-        const SizedBox(height: AppConstants.defaultPadding),
-
-        // Control Buttons
-        Padding(
-          padding: const EdgeInsets.all(AppConstants.defaultPadding),
-          child: SizedBox(
-            width: double.infinity,
-            height: AppConstants.buttonHeight,
-            child: ElevatedButton.icon(
-              onPressed: _isScanning ? _stopScanner : _startScanner,
-              icon: Icon(_isScanning ? Icons.stop : Icons.play_arrow),
-              label: Text(_isScanning ? 'Stop Scanner' : 'Start Scanner'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isScanning ? AppTheme.errorColor : AppTheme.accentColor,
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -540,10 +826,19 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
     // Show success message and switch to manual tab
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Barcode scanned: ${barcode.rawValue}'),
-        backgroundColor: AppTheme.successColor,
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text('Barcode scanned: ${barcode.rawValue}')),
+          ],
+        ),
+        backgroundColor: AppTheme.statusAvailable,
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+        ),
       ),
     );
 
@@ -567,7 +862,7 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
 
     try {
       final firestoreService = ref.read(firestoreServiceProvider);
-      
+
       // Create new projector
       final projector = Projector(
         id: '', // Will be set by Firestore
@@ -575,26 +870,43 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
         modelName: _modelNameController.text.trim(),
         projectorName: _projectorNameController.text.trim(),
         status: _selectedStatus,
-        location: _locationController.text.trim().isNotEmpty ? _locationController.text.trim() : null,
-        notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+        location: _locationController.text.trim().isNotEmpty
+            ? _locationController.text.trim()
+            : null,
+        notes: _notesController.text.trim().isNotEmpty
+            ? _notesController.text.trim()
+            : null,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
       // Add to Firestore
-      final projectorId = await firestoreService.addProjector(projector);
-      
+      await firestoreService.addProjector(projector);
+
       if (mounted) {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Projector added successfully! ID: $projectorId'),
-            backgroundColor: AppTheme.successColor,
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Projector "${projector.projectorName}" added successfully!',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppTheme.statusAvailable,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+            ),
           ),
         );
-        
+
         // Navigate back
         Navigator.of(context).pop();
       }
@@ -603,13 +915,24 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
         setState(() {
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding projector: $e'),
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('Error adding projector: ${e.toString()}'),
+                ),
+              ],
+            ),
             backgroundColor: AppTheme.errorColor,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+            ),
           ),
         );
       }

@@ -5,6 +5,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../shared/models/projector.dart';
 import 'add_projector_screen.dart';
+import 'edit_projector_screen.dart';
 
 /// Screen for viewing asset register
 class AssetsScreen extends ConsumerStatefulWidget {
@@ -779,11 +780,9 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
 
   /// Edit projector
   void _editProjector(BuildContext context, Projector projector) {
-    // TODO: Implement edit projector screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Edit feature coming soon!'),
-        duration: Duration(seconds: 2),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => EditProjectorScreen(projector: projector),
       ),
     );
   }
