@@ -6,7 +6,6 @@ import 'package:confetti/confetti.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 
-
 /// Welcome screen shown after successful authentication
 class WelcomeScreen extends ConsumerStatefulWidget {
   final String userName;

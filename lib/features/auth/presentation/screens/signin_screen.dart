@@ -7,7 +7,6 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firebase_auth_service.dart';
 
-
 /// Sign in screen for staff authentication
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});

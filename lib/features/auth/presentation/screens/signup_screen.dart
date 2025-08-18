@@ -7,7 +7,6 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firebase_auth_service.dart';
 
-
 /// Sign up screen for new staff registration
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});

@@ -10,7 +10,7 @@ import '../../../../shared/models/projector.dart';
 /// Scanning screen for barcode/QR code detection
 class ScanningScreen extends ConsumerStatefulWidget {
   final String? purpose; // 'issue' or 'return'
-  
+
   const ScanningScreen({super.key, this.purpose});
 
   @override
@@ -24,7 +24,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
   bool _hasPermission = false;
   bool _isLoading = false;
   String? _errorMessage;
-  
+
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -40,13 +40,9 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
       duration: const Duration(seconds: 2),
       vsync: this,
     );
-    _pulseAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.2,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
     _pulseController.repeat(reverse: true);
   }
 
@@ -70,7 +66,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
 
   void _onDetect(BarcodeCapture capture) {
     if (!_isScanning) return;
-    
+
     final code = capture.barcodes.first.rawValue;
     if (code != null && code.isNotEmpty) {
       setState(() {
@@ -88,8 +84,10 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
 
     try {
       final firestoreService = ref.read(firestoreServiceProvider);
-      final projector = await firestoreService.getProjectorBySerialNumber(serialNumber);
-      
+      final projector = await firestoreService.getProjectorBySerialNumber(
+        serialNumber,
+      );
+
       if (projector != null) {
         setState(() {
           _isLoading = false;
@@ -117,11 +115,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(
-              Icons.check_circle,
-              color: Colors.green,
-              size: 24,
-            ),
+            Icon(Icons.check_circle, color: Colors.green, size: 24),
             const SizedBox(width: 8),
             const Text('Projector Found'),
           ],
@@ -151,7 +145,9 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
               Navigator.of(context).pop();
               _proceedWithProjector(projector);
             },
-            child: Text(widget.purpose == 'return' ? 'Return This' : 'Issue This'),
+            child: Text(
+              widget.purpose == 'return' ? 'Return This' : 'Issue This',
+            ),
           ),
         ],
       ),
@@ -164,16 +160,14 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(
-              Icons.error_outline,
-              color: Colors.orange,
-              size: 24,
-            ),
+            Icon(Icons.error_outline, color: Colors.orange, size: 24),
             const SizedBox(width: 8),
             const Text('Projector Not Found'),
           ],
         ),
-        content: Text('The projector with serial number "$serialNumber" was not found in the database.'),
+        content: Text(
+          'The projector with serial number "$serialNumber" was not found in the database.',
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -262,14 +256,19 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text('Scan Projector ${widget.purpose == 'return' ? 'for Return' : 'for Issue'}'),
+        title: Text(
+          'Scan Projector ${widget.purpose == 'return' ? 'for Return' : 'for Issue'}',
+        ),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(_scannerController?.torchEnabled == true 
-              ? Icons.flash_on : Icons.flash_off),
+            icon: Icon(
+              _scannerController?.torchEnabled == true
+                  ? Icons.flash_on
+                  : Icons.flash_off,
+            ),
             onPressed: () {
               _scannerController?.toggleTorch();
             },
@@ -293,17 +292,15 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
             });
           },
         ),
-        
+
         // Scanning overlay
         _buildScanningOverlay(),
-        
+
         // Error message
-        if (_errorMessage != null)
-          _buildErrorMessage(),
-        
+        if (_errorMessage != null) _buildErrorMessage(),
+
         // Loading indicator
-        if (_isLoading)
-          _buildLoadingIndicator(),
+        if (_isLoading) _buildLoadingIndicator(),
       ],
     );
   }
@@ -312,24 +309,18 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
     return Positioned.fill(
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(
-            color: AppTheme.primaryColor,
-            width: 2,
-          ),
+          border: Border.all(color: AppTheme.primaryColor, width: 2),
         ),
         child: Column(
           children: [
             const Spacer(),
-            
+
             // Scanning frame
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 40),
               height: 200,
               decoration: BoxDecoration(
-                border: Border.all(
-                  color: AppTheme.primaryColor,
-                  width: 3,
-                ),
+                border: Border.all(color: AppTheme.primaryColor, width: 3),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Stack(
@@ -391,7 +382,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
                       ),
                     ),
                   ),
-                  
+
                   // Scanning line
                   AnimatedBuilder(
                     animation: _pulseAnimation,
@@ -410,9 +401,9 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Instructions
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -431,9 +422,9 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
                 textAlign: TextAlign.center,
               ),
             ),
-            
+
             const Spacer(),
-            
+
             // Manual entry button
             Padding(
               padding: const EdgeInsets.all(20),
@@ -444,7 +435,10 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
@@ -534,9 +528,9 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
             const SizedBox(height: 16),
             Text(
               'This app needs camera access to scan projector barcodes and QR codes.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppTheme.textSecondary,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: AppTheme.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -547,7 +541,10 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
             ),
             const SizedBox(height: 16),
