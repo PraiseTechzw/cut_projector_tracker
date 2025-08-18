@@ -21,6 +21,7 @@ class ReturnsScreen extends ConsumerStatefulWidget {
 
 class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
     with TickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
   Projector? _selectedProjector;
   ProjectorTransaction? _activeTransaction;
   bool _isLoading = false;
@@ -154,10 +155,15 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
       return;
     }
 
-    if (_selectedProjector!.status != 'Issued') {
+    if (_selectedProjector!.status != AppConstants.statusIssued) {
       setState(() {
         _errorMessage = 'This projector is not currently issued';
       });
+      return;
+    }
+
+    // Validate form
+    if (!_formKey.currentState!.validate()) {
       return;
     }
 
@@ -173,6 +179,7 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
       await firestoreService.returnProjector(
         transactionId: _activeTransaction!.id,
         projectorId: _selectedProjector!.id,
+        returnNotes: _returnNotesController.text.trim(),
       );
 
       setState(() {
@@ -209,11 +216,46 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Projector: ${_selectedProjector!.serialNumber}'),
-            Text('Returned From: ${_activeTransaction!.lecturerName}'),
-            Text('Return Date: ${_formatDate(DateTime.now())}'),
+            _buildDetailRow(
+              'Projector',
+              _selectedProjector!.serialNumber,
+              Icons.qr_code,
+            ),
+            _buildDetailRow(
+              'Returned From',
+              _activeTransaction!.lecturerName,
+              Icons.person,
+            ),
+            _buildDetailRow(
+              'Issue Date',
+              _formatDate(_activeTransaction!.dateIssued),
+              Icons.send,
+            ),
+            _buildDetailRow(
+              'Return Date',
+              _formatDate(DateTime.now()),
+              Icons.undo,
+            ),
+            if (_activeTransaction!.purpose != null &&
+                _activeTransaction!.purpose!.isNotEmpty)
+              _buildDetailRow(
+                'Purpose',
+                _activeTransaction!.purpose!,
+                Icons.info,
+              ),
+            if (_activeTransaction!.notes != null &&
+                _activeTransaction!.notes!.isNotEmpty)
+              _buildDetailRow(
+                'Issue Notes',
+                _activeTransaction!.notes!,
+                Icons.note,
+              ),
             if (_returnNotesController.text.isNotEmpty)
-              Text('Notes: ${_returnNotesController.text}'),
+              _buildDetailRow(
+                'Return Notes',
+                _returnNotesController.text,
+                Icons.note_add,
+              ),
           ],
         ),
         actions: [
@@ -591,13 +633,41 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
               ],
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _returnNotesController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Return Notes (Optional)',
-                hintText: 'Enter any notes about the return...',
-                border: OutlineInputBorder(),
+            Form(
+              key: _formKey,
+              child: TextFormField(
+                controller: _returnNotesController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'Return Notes *',
+                  hintText: 'Enter any notes about the return...',
+                  prefixIcon: const Icon(Icons.note_add),
+                  filled: true,
+                  fillColor: AppTheme.backgroundColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.borderRadius,
+                    ),
+                    borderSide: BorderSide(
+                      color: AppTheme.textTertiary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.borderRadius,
+                    ),
+                    borderSide: BorderSide(
+                      color: AppTheme.primaryColor,
+                      width: 2,
+                    ),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Return notes are required for tracking purposes';
+                  }
+                  return null;
+                },
               ),
             ),
           ],
@@ -664,7 +734,7 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
     final canReturn =
         _selectedProjector != null &&
         _activeTransaction != null &&
-        _selectedProjector!.status == 'Issued';
+        _selectedProjector!.status == AppConstants.statusIssued;
 
     return ElevatedButton.icon(
       onPressed: canReturn && !_isLoading ? _returnProjector : null,
@@ -688,6 +758,45 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppConstants.borderRadius),
         ),
+      ),
+    );
+  }
+
+  /// Build detail row for transaction details
+  Widget _buildDetailRow(String label, String value, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, size: 16, color: AppTheme.primaryColor),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

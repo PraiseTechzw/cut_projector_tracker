@@ -138,9 +138,15 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
             if (widget.projector.lastIssuedTo != null)
               _buildInfoRow('Last Issued To', widget.projector.lastIssuedTo!),
             if (widget.projector.lastIssuedDate != null)
-              _buildInfoRow('Last Issue Date', _formatDate(widget.projector.lastIssuedDate!)),
+              _buildInfoRow(
+                'Last Issue Date',
+                _formatDate(widget.projector.lastIssuedDate!),
+              ),
             if (widget.projector.lastReturnDate != null)
-              _buildInfoRow('Last Return Date', _formatDate(widget.projector.lastReturnDate!)),
+              _buildInfoRow(
+                'Last Return Date',
+                _formatDate(widget.projector.lastReturnDate!),
+              ),
           ],
         ),
         actions: [
@@ -159,7 +165,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
       final firestoreService = ref.read(firestoreServiceProvider);
       final transactionsStream = firestoreService.getTransactions();
       final transactions = await transactionsStream.first;
-      
+
       // Get unique lecturer names from recent transactions
       final recentLecturerNames = transactions
           .where((t) => t.status == AppConstants.transactionActive)
@@ -202,7 +208,8 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
       return lecturer.name.toLowerCase().contains(searchLower) ||
           lecturer.department.toLowerCase().contains(searchLower) ||
           lecturer.email.toLowerCase().contains(searchLower) ||
-          (lecturer.phoneNumber?.toLowerCase().contains(searchLower) ?? false) ||
+          (lecturer.phoneNumber?.toLowerCase().contains(searchLower) ??
+              false) ||
           (lecturer.employeeId?.toLowerCase().contains(searchLower) ?? false);
     }).toList();
 
@@ -211,10 +218,10 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
       final aNameLower = a.name.toLowerCase();
       final bNameLower = b.name.toLowerCase();
       final queryLower = query.toLowerCase();
-      
+
       final aStartsWith = aNameLower.startsWith(queryLower);
       final bStartsWith = bNameLower.startsWith(queryLower);
-      
+
       if (aStartsWith && !bStartsWith) return -1;
       if (!aStartsWith && bStartsWith) return 1;
       return aNameLower.compareTo(bNameLower);
@@ -233,7 +240,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
       _searchResults = [];
       _isSearching = false;
     });
-    
+
     // Add to recent lecturers if not already there
     if (!_recentLecturers.any((l) => l.id == lecturer.id)) {
       setState(() {
@@ -293,7 +300,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
 
       // Check if email already exists
       final existingLecturer = _allLecturers.firstWhere(
-        (l) => l.email.toLowerCase() == _newLecturerEmailController.text.trim().toLowerCase(),
+        (l) =>
+            l.email.toLowerCase() ==
+            _newLecturerEmailController.text.trim().toLowerCase(),
         orElse: () => Lecturer(
           id: '',
           name: '',
@@ -420,7 +429,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
     if (widget.projector.status != AppConstants.statusAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Projector is currently ${widget.projector.status.toLowerCase()}'),
+          content: Text(
+            'Projector is currently ${widget.projector.status.toLowerCase()}',
+          ),
           backgroundColor: AppTheme.errorColor,
         ),
       );
@@ -440,6 +451,10 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
         lecturerId: _selectedLecturer!.id,
         projectorSerialNumber: widget.projector.serialNumber,
         lecturerName: _selectedLecturer!.name,
+        purpose: _purposeController.text.trim().isNotEmpty
+            ? _purposeController.text.trim()
+            : 'General use',
+        notes: _notesController.text.trim(),
       );
 
       if (mounted) {
@@ -582,11 +597,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
             color: AppTheme.accentColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(
-            Icons.send,
-            color: AppTheme.accentColor,
-            size: 24,
-          ),
+          child: Icon(Icons.send, color: AppTheme.accentColor, size: 24),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -602,8 +613,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
               ),
               Text(
                 'Assign projector to a lecturer',
-                style: Theme.of(context).textTheme.bodyMedium
-                    ?.copyWith(color: AppTheme.textSecondary),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
               ),
             ],
           ),
@@ -647,7 +659,10 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
           ],
           if (widget.projector.lastIssuedDate != null) ...[
             const SizedBox(height: 8),
-            _buildInfoRow('Last Issue Date', _formatDate(widget.projector.lastIssuedDate!)),
+            _buildInfoRow(
+              'Last Issue Date',
+              _formatDate(widget.projector.lastIssuedDate!),
+            ),
           ],
         ],
       ),
@@ -689,9 +704,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
         const SizedBox(height: 8),
         Text(
           'Choose an existing lecturer or add a new one',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textSecondary,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
         ),
         const SizedBox(height: 12),
 
@@ -798,7 +813,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                 final lecturer = _searchResults[index];
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppTheme.accentColor.withValues(alpha: 0.1),
+                    backgroundColor: AppTheme.accentColor.withValues(
+                      alpha: 0.1,
+                    ),
                     child: Text(
                       lecturer.name[0].toUpperCase(),
                       style: TextStyle(
@@ -815,7 +832,8 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(lecturer.department),
-                      if (lecturer.phoneNumber != null && lecturer.phoneNumber!.isNotEmpty)
+                      if (lecturer.phoneNumber != null &&
+                          lecturer.phoneNumber!.isNotEmpty)
                         Text(
                           lecturer.phoneNumber!,
                           style: TextStyle(
@@ -910,7 +928,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
         ],
 
         // No Results Message
-        if (_isSearching && _searchResults.isEmpty && _searchQuery.isNotEmpty) ...[
+        if (_isSearching &&
+            _searchResults.isEmpty &&
+            _searchQuery.isNotEmpty) ...[
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(16),
@@ -963,9 +983,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
         const SizedBox(height: 8),
         Text(
           'Brief description of why the projector is being issued',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textSecondary,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
         ),
         const SizedBox(height: 12),
         TextFormField(
@@ -1013,9 +1033,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
         const SizedBox(height: 8),
         Text(
           'Optional: Add any special instructions or notes',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textSecondary,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
         ),
         const SizedBox(height: 12),
         TextFormField(
@@ -1050,10 +1070,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
             onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.primaryColor,
-              side: BorderSide(
-                color: AppTheme.primaryColor,
-                width: 1.5,
-              ),
+              side: BorderSide(color: AppTheme.primaryColor, width: 1.5),
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppConstants.borderRadius),
@@ -1061,10 +1078,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
             ),
             child: const Text(
               'Cancel',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -1126,7 +1140,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
               offset: const Offset(0, 10),
             ),
           ],
-          border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+          border: Border.all(
+            color: AppTheme.primaryColor.withValues(alpha: 0.2),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1171,7 +1187,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ..._recentLecturers.map((lecturer) => _buildQuickLecturerItem(lecturer)),
+                    ..._recentLecturers.map(
+                      (lecturer) => _buildQuickLecturerItem(lecturer),
+                    ),
                   ],
                 ),
               ),
@@ -1198,7 +1216,11 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                         color: AppTheme.accentColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.person_add, color: AppTheme.accentColor, size: 20),
+                      child: Icon(
+                        Icons.person_add,
+                        color: AppTheme.accentColor,
+                        size: 20,
+                      ),
                     ),
                     title: const Text('Add New Lecturer'),
                     subtitle: const Text('Create lecturer account'),
@@ -1321,7 +1343,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
               if (value == null || value.trim().isEmpty) {
                 return 'Email is required';
               }
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+              if (!RegExp(
+                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+              ).hasMatch(value)) {
                 return 'Please enter a valid email';
               }
               return null;
@@ -1382,7 +1406,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.borderRadius,
+                  ),
                 ),
               ),
             ),

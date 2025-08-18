@@ -262,6 +262,8 @@ class FirestoreService {
     required String lecturerId,
     required String projectorSerialNumber,
     required String lecturerName,
+    String? purpose,
+    String? notes,
   }) async {
     try {
       final batch = _firestore.batch();
@@ -275,6 +277,8 @@ class FirestoreService {
         lecturerName: lecturerName,
         status: AppConstants.transactionActive,
         dateIssued: DateTime.now(),
+        purpose: purpose,
+        notes: notes,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -301,6 +305,7 @@ class FirestoreService {
   Future<void> returnProjector({
     required String transactionId,
     required String projectorId,
+    String? returnNotes,
   }) async {
     try {
       final batch = _firestore.batch();
@@ -310,6 +315,7 @@ class FirestoreService {
       batch.update(transactionRef, {
         'status': AppConstants.transactionReturned,
         'dateReturned': Timestamp.now(),
+        'returnNotes': returnNotes,
         'updatedAt': Timestamp.now(),
       });
 

@@ -10,6 +10,9 @@ class ProjectorTransaction {
   final String status;
   final DateTime dateIssued;
   final DateTime? dateReturned;
+  final String? purpose;
+  final String? notes;
+  final String? returnNotes;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -22,6 +25,9 @@ class ProjectorTransaction {
     required this.status,
     required this.dateIssued,
     this.dateReturned,
+    this.purpose,
+    this.notes,
+    this.returnNotes,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -42,6 +48,9 @@ class ProjectorTransaction {
       dateReturned: data['dateReturned'] != null
           ? (data['dateReturned'] as Timestamp).toDate()
           : null,
+      purpose: data['purpose'],
+      notes: data['notes'],
+      returnNotes: data['returnNotes'],
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
@@ -63,6 +72,9 @@ class ProjectorTransaction {
       'dateReturned': dateReturned != null
           ? Timestamp.fromDate(dateReturned!)
           : null,
+      'purpose': purpose,
+      'notes': notes,
+      'returnNotes': returnNotes,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -78,6 +90,9 @@ class ProjectorTransaction {
     String? status,
     DateTime? dateIssued,
     DateTime? dateReturned,
+    String? purpose,
+    String? notes,
+    String? returnNotes,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -85,11 +100,15 @@ class ProjectorTransaction {
       id: id ?? this.id,
       projectorId: projectorId ?? this.projectorId,
       lecturerId: lecturerId ?? this.lecturerId,
-      projectorSerialNumber: projectorSerialNumber ?? this.projectorSerialNumber,
+      projectorSerialNumber:
+          projectorSerialNumber ?? this.projectorSerialNumber,
       lecturerName: lecturerName ?? this.lecturerName,
       status: status ?? this.status,
       dateIssued: dateIssued ?? this.dateIssued,
       dateReturned: dateReturned ?? this.dateReturned,
+      purpose: purpose ?? this.purpose,
+      notes: notes ?? this.notes,
+      returnNotes: returnNotes ?? this.returnNotes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -113,11 +132,11 @@ class ProjectorTransaction {
   String get durationString {
     final dur = duration;
     if (dur == null) return 'N/A';
-    
+
     final days = dur.inDays;
     final hours = dur.inHours % 24;
     final minutes = dur.inMinutes % 60;
-    
+
     if (days > 0) {
       return '${days}d ${hours}h ${minutes}m';
     } else if (hours > 0) {
