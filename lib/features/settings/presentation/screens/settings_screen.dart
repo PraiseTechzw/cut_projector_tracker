@@ -456,7 +456,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
                 subtitle: Text(
-                  '${AppConstants.appVersion}',
+                  AppConstants.appVersion,
                   style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
                 ),
               ),

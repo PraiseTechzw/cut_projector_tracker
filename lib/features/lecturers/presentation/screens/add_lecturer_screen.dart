@@ -21,7 +21,7 @@ class _AddLecturerScreenState extends State<AddLecturerScreen> {
   final _phoneController = TextEditingController();
   final _employeeIdController = TextEditingController();
   
-  bool _isLoading = false;
+  final bool _isLoading = false;
   bool _isSubmitting = false;
 
   // Predefined department options

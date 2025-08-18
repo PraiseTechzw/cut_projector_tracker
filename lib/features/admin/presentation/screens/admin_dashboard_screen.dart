@@ -4,7 +4,6 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../shared/models/projector.dart';
-import '../../../../shared/models/lecturer.dart';
 import '../../../../shared/models/transaction.dart';
 
 /// Admin dashboard screen with system overview and analytics

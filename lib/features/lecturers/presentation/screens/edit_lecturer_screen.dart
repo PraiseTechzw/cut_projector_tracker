@@ -23,7 +23,7 @@ class _EditLecturerScreenState extends State<EditLecturerScreen> {
   late final TextEditingController _phoneController;
   late final TextEditingController _employeeIdController;
   
-  bool _isLoading = false;
+  final bool _isLoading = false;
   bool _isSubmitting = false;
   bool _hasChanges = false;
 

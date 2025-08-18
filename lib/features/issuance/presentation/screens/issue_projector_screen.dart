@@ -775,8 +775,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                           fontSize: 12,
                         ),
                       ),
-                      if (_selectedLecturer!.phoneNumber != null &&
-                          _selectedLecturer!.phoneNumber!.isNotEmpty) ...[
+                      if (_selectedLecturer!.phoneNumber != null) ...[
                         const SizedBox(height: 4),
                         Text(
                           _selectedLecturer!.phoneNumber!,

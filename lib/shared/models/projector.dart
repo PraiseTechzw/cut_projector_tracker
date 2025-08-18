@@ -4,28 +4,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Projector {
   final String id;
   final String serialNumber;
-  final String modelName;
-  final String projectorName;
   final String status;
   final String? lastIssuedTo;
   final DateTime? lastIssuedDate;
   final DateTime? lastReturnDate;
-  final String? location;
-  final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   const Projector({
     required this.id,
     required this.serialNumber,
-    required this.modelName,
-    required this.projectorName,
     required this.status,
     this.lastIssuedTo,
     this.lastIssuedDate,
     this.lastReturnDate,
-    this.location,
-    this.notes,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -36,8 +28,6 @@ class Projector {
     return Projector(
       id: doc.id,
       serialNumber: data['serialNumber'] ?? '',
-      modelName: data['modelName'] ?? '',
-      projectorName: data['projectorName'] ?? '',
       status: data['status'] ?? 'Available',
       lastIssuedTo: data['lastIssuedTo'],
       lastIssuedDate: data['lastIssuedDate'] != null
@@ -46,8 +36,6 @@ class Projector {
       lastReturnDate: data['lastReturnDate'] != null
           ? (data['lastReturnDate'] as Timestamp).toDate()
           : null,
-      location: data['location'],
-      notes: data['notes'],
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
@@ -61,8 +49,6 @@ class Projector {
   Map<String, dynamic> toFirestore() {
     return {
       'serialNumber': serialNumber,
-      'modelName': modelName,
-      'projectorName': projectorName,
       'status': status,
       'lastIssuedTo': lastIssuedTo,
       'lastIssuedDate': lastIssuedDate != null
@@ -71,8 +57,6 @@ class Projector {
       'lastReturnDate': lastReturnDate != null
           ? Timestamp.fromDate(lastReturnDate!)
           : null,
-      'location': location,
-      'notes': notes,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -82,28 +66,20 @@ class Projector {
   Projector copyWith({
     String? id,
     String? serialNumber,
-    String? modelName,
-    String? projectorName,
     String? status,
     String? lastIssuedTo,
     DateTime? lastIssuedDate,
     DateTime? lastReturnDate,
-    String? location,
-    String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return Projector(
       id: id ?? this.id,
       serialNumber: serialNumber ?? this.serialNumber,
-      modelName: modelName ?? this.modelName,
-      projectorName: projectorName ?? this.projectorName,
       status: status ?? this.status,
       lastIssuedTo: lastIssuedTo ?? this.lastIssuedTo,
       lastIssuedDate: lastIssuedDate ?? this.lastIssuedDate,
       lastReturnDate: lastReturnDate ?? this.lastReturnDate,
-      location: location ?? this.location,
-      notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -120,7 +96,7 @@ class Projector {
 
   @override
   String toString() {
-    return 'Projector(id: $id, serialNumber: $serialNumber, modelName: $modelName, projectorName: $projectorName, status: $status)';
+    return 'Projector(id: $id, serialNumber: $serialNumber, status: $status)';
   }
 
   @override

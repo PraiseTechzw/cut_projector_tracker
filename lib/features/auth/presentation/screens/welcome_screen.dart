@@ -39,7 +39,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   void _initializeAnimations() {
     // Confetti controller
-    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 3),
+    );
 
     // Fade animation
     _fadeController = AnimationController(
@@ -49,23 +51,16 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeIn,
-    ));
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
 
     // Scale animation
     _scaleController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 0.5,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.elasticOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
+    );
 
     // Start animations
     _fadeController.forward();
@@ -205,19 +200,23 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                             children: [
                               Text(
                                 _getTimeBasedGreeting(),
-                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                  color: AppTheme.textSecondary,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
+                                      color: AppTheme.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 widget.userName,
-                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                  color: AppTheme.primaryColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context).textTheme.displaySmall
+                                    ?.copyWith(
+                                      color: AppTheme.primaryColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                 textAlign: TextAlign.center,
                               ),
                             ],
@@ -238,9 +237,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                             widget.isNewUser
                                 ? 'Your account has been created successfully!'
                                 : 'Welcome back to CUT Projector Tracker!',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(color: AppTheme.textSecondary),
                             textAlign: TextAlign.center,
                           ),
                         );
@@ -266,9 +264,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                               const SizedBox(height: 16),
                               Text(
                                 'Setting up your workspace...',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppTheme.textTertiary,
-                                ),
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: AppTheme.textTertiary),
                               ),
                             ],
                           ),
@@ -288,8 +285,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: AppTheme.surfaceColor,
-                              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-                              border: Border.all(color: AppTheme.textTertiary.withOpacity(0.2)),
+                              borderRadius: BorderRadius.circular(
+                                AppConstants.borderRadius,
+                              ),
+                              border: Border.all(
+                                color: AppTheme.textTertiary.withOpacity(0.2),
+                              ),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -302,10 +303,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                 const SizedBox(width: 8),
                                 Text(
                                   AppConstants.appName,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppTheme.textSecondary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: AppTheme.textSecondary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                 ),
                               ],
                             ),

@@ -9,7 +9,6 @@ import '../../features/history/presentation/screens/history_screen.dart';
 import '../../features/issuance/presentation/screens/issuance_screen.dart';
 import '../../features/returns/presentation/screens/returns_screen.dart';
 import '../../features/scanning/presentation/screens/scanning_screen.dart';
-import '../../features/lecturers/presentation/screens/lecturers_screen.dart';
 
 /// Main navigation widget with bottom navigation bar
 class MainNavigation extends ConsumerStatefulWidget {
@@ -27,7 +26,6 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     const IssuanceScreen(),
     const ReturnsScreen(),
     const AssetsScreen(),
-    const LecturersScreen(),
     const HistoryScreen(),
   ];
 
@@ -42,7 +40,6 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     ),
     const BottomNavigationBarItem(icon: Icon(Icons.undo), label: 'Return'),
     const BottomNavigationBarItem(icon: Icon(Icons.inventory), label: 'Assets'),
-    const BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Lecturers'),
     const BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
   ];
 
@@ -74,9 +71,6 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                 switch (value) {
                   case 'profile':
                     _showUserProfile();
-                    break;
-                  case 'admin':
-                    _navigateToAdminDashboard();
                     break;
                   case 'logout':
                     _showLogoutConfirmation();
@@ -111,20 +105,6 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(),
-                const PopupMenuItem(
-                  value: 'admin',
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.admin_panel_settings,
-                        color: AppTheme.accentColor,
-                      ),
-                      SizedBox(width: 12),
-                      Text('Admin Dashboard'),
                     ],
                   ),
                 ),
@@ -186,8 +166,6 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       case 3:
         return 'Asset Register';
       case 4:
-        return 'Manage Lecturers';
-      case 5:
         return 'Transaction History';
       default:
         return AppConstants.appName;
@@ -319,17 +297,6 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
             child: const Text('Logout'),
           ),
         ],
-      ),
-    );
-  }
-
-  /// Navigate to admin dashboard
-  void _navigateToAdminDashboard() {
-    // TODO: Navigate to admin dashboard
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Admin Dashboard coming soon'),
-        backgroundColor: AppTheme.accentColor,
       ),
     );
   }

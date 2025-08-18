@@ -30,9 +30,10 @@ class FirestoreService {
     return _projectorsCollection
         .orderBy('serialNumber')
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Projector.fromFirestore(doc))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Projector.fromFirestore(doc)).toList(),
+        );
   }
 
   /// Get projector by ID
@@ -55,7 +56,7 @@ class FirestoreService {
           .where('serialNumber', isEqualTo: serialNumber)
           .limit(1)
           .get();
-      
+
       if (query.docs.isNotEmpty) {
         return Projector.fromFirestore(query.docs.first);
       }
@@ -102,9 +103,10 @@ class FirestoreService {
     return _lecturersCollection
         .orderBy('name')
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Lecturer.fromFirestore(doc))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Lecturer.fromFirestore(doc)).toList(),
+        );
   }
 
   /// Get lecturer by ID
@@ -165,15 +167,6 @@ class FirestoreService {
     }
   }
 
-  /// Delete lecturer
-  Future<void> deleteLecturer(String id) async {
-    try {
-      await _lecturersCollection.doc(id).delete();
-    } catch (e) {
-      throw 'Failed to delete lecturer: $e';
-    }
-  }
-
   // TRANSACTION OPERATIONS
 
   /// Get all transactions
@@ -181,9 +174,11 @@ class FirestoreService {
     return _transactionsCollection
         .orderBy('dateIssued', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ProjectorTransaction.fromFirestore(doc))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => ProjectorTransaction.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   /// Get active transactions
@@ -192,37 +187,49 @@ class FirestoreService {
         .where('status', isEqualTo: AppConstants.transactionActive)
         .orderBy('dateIssued', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ProjectorTransaction.fromFirestore(doc))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => ProjectorTransaction.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   /// Get transactions by projector ID
-  Stream<List<ProjectorTransaction>> getTransactionsByProjector(String projectorId) {
+  Stream<List<ProjectorTransaction>> getTransactionsByProjector(
+    String projectorId,
+  ) {
     return _transactionsCollection
         .where('projectorId', isEqualTo: projectorId)
         .orderBy('dateIssued', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ProjectorTransaction.fromFirestore(doc))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => ProjectorTransaction.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   /// Get transactions by lecturer ID
-  Stream<List<ProjectorTransaction>> getTransactionsByLecturer(String lecturerId) {
+  Stream<List<ProjectorTransaction>> getTransactionsByLecturer(
+    String lecturerId,
+  ) {
     return _transactionsCollection
         .where('lecturerId', isEqualTo: lecturerId)
         .orderBy('dateIssued', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ProjectorTransaction.fromFirestore(doc))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => ProjectorTransaction.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   /// Add new transaction
   Future<String> addTransaction(ProjectorTransaction transaction) async {
     try {
-      final docRef = await _transactionsCollection.add(transaction.toFirestore());
+      final docRef = await _transactionsCollection.add(
+        transaction.toFirestore(),
+      );
       return docRef.id;
     } catch (e) {
       throw 'Failed to add transaction: $e';
@@ -334,14 +341,18 @@ Stream<List<Lecturer>> lecturersStream(LecturersStreamRef ref) {
 
 /// Provider for transactions stream
 @riverpod
-Stream<List<ProjectorTransaction>> transactionsStream(TransactionsStreamRef ref) {
+Stream<List<ProjectorTransaction>> transactionsStream(
+  TransactionsStreamRef ref,
+) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   return firestoreService.getTransactions();
 }
 
 /// Provider for active transactions stream
 @riverpod
-Stream<List<ProjectorTransaction>> activeTransactionsStream(ActiveTransactionsStreamRef ref) {
+Stream<List<ProjectorTransaction>> activeTransactionsStream(
+  ActiveTransactionsStreamRef ref,
+) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   return firestoreService.getActiveTransactions();
 }
