@@ -6,6 +6,7 @@ class Lecturer {
   final String name;
   final String department;
   final String email;
+  final String? phoneNumber;
   final String? employeeId;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -15,6 +16,7 @@ class Lecturer {
     required this.name,
     required this.department,
     required this.email,
+    this.phoneNumber,
     this.employeeId,
     required this.createdAt,
     required this.updatedAt,
@@ -28,6 +30,7 @@ class Lecturer {
       name: data['name'] ?? '',
       department: data['department'] ?? '',
       email: data['email'] ?? '',
+      phoneNumber: data['phoneNumber'],
       employeeId: data['employeeId'],
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
@@ -44,6 +47,7 @@ class Lecturer {
       'name': name,
       'department': department,
       'email': email,
+      'phoneNumber': phoneNumber,
       'employeeId': employeeId,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
@@ -56,6 +60,7 @@ class Lecturer {
     String? name,
     String? department,
     String? email,
+    String? phoneNumber,
     String? employeeId,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -65,6 +70,7 @@ class Lecturer {
       name: name ?? this.name,
       department: department ?? this.department,
       email: email ?? this.email,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
       employeeId: employeeId ?? this.employeeId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

@@ -4,7 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Projector {
   final String id;
   final String serialNumber;
+  final String modelName;
+  final String projectorName;
   final String status;
+  final String? location;
+  final String? notes;
   final String? lastIssuedTo;
   final DateTime? lastIssuedDate;
   final DateTime? lastReturnDate;
@@ -14,7 +18,11 @@ class Projector {
   const Projector({
     required this.id,
     required this.serialNumber,
+    required this.modelName,
+    required this.projectorName,
     required this.status,
+    this.location,
+    this.notes,
     this.lastIssuedTo,
     this.lastIssuedDate,
     this.lastReturnDate,
@@ -28,7 +36,11 @@ class Projector {
     return Projector(
       id: doc.id,
       serialNumber: data['serialNumber'] ?? '',
+      modelName: data['modelName'] ?? '',
+      projectorName: data['projectorName'] ?? '',
       status: data['status'] ?? 'Available',
+      location: data['location'],
+      notes: data['notes'],
       lastIssuedTo: data['lastIssuedTo'],
       lastIssuedDate: data['lastIssuedDate'] != null
           ? (data['lastIssuedDate'] as Timestamp).toDate()
@@ -49,7 +61,11 @@ class Projector {
   Map<String, dynamic> toFirestore() {
     return {
       'serialNumber': serialNumber,
+      'modelName': modelName,
+      'projectorName': projectorName,
       'status': status,
+      'location': location,
+      'notes': notes,
       'lastIssuedTo': lastIssuedTo,
       'lastIssuedDate': lastIssuedDate != null
           ? Timestamp.fromDate(lastIssuedDate!)
@@ -66,7 +82,11 @@ class Projector {
   Projector copyWith({
     String? id,
     String? serialNumber,
+    String? modelName,
+    String? projectorName,
     String? status,
+    String? location,
+    String? notes,
     String? lastIssuedTo,
     DateTime? lastIssuedDate,
     DateTime? lastReturnDate,
@@ -76,7 +96,11 @@ class Projector {
     return Projector(
       id: id ?? this.id,
       serialNumber: serialNumber ?? this.serialNumber,
+      modelName: modelName ?? this.modelName,
+      projectorName: projectorName ?? this.projectorName,
       status: status ?? this.status,
+      location: location ?? this.location,
+      notes: notes ?? this.notes,
       lastIssuedTo: lastIssuedTo ?? this.lastIssuedTo,
       lastIssuedDate: lastIssuedDate ?? this.lastIssuedDate,
       lastReturnDate: lastReturnDate ?? this.lastReturnDate,

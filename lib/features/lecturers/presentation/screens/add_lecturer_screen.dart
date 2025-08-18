@@ -20,7 +20,7 @@ class _AddLecturerScreenState extends State<AddLecturerScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _employeeIdController = TextEditingController();
-  
+
   final bool _isLoading = false;
   bool _isSubmitting = false;
 
@@ -78,8 +78,8 @@ class _AddLecturerScreenState extends State<AddLecturerScreen> {
         phoneNumber: _phoneController.text.trim().isEmpty 
             ? null 
             : _phoneController.text.trim(),
-        employeeId: _employeeIdController.text.trim().isEmpty 
-            ? null 
+        employeeId: _employeeIdController.text.trim().isEmpty
+            ? null
             : _employeeIdController.text.trim(),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -144,7 +144,9 @@ class _AddLecturerScreenState extends State<AddLecturerScreen> {
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppTheme.primaryColor,
+                ),
               ),
             )
           : SingleChildScrollView(
@@ -193,17 +195,19 @@ class _AddLecturerScreenState extends State<AddLecturerScreen> {
                           const SizedBox(height: 16),
                           Text(
                             'Add New Lecturer',
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Enter lecturer information to add them to the system',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                ),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -266,22 +270,6 @@ class _AddLecturerScreenState extends State<AddLecturerScreen> {
                         textInputAction: TextInputAction.next,
                       ),
                       const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _phoneController,
-                        label: 'Phone Number (Optional)',
-                        hint: 'Enter phone number',
-                        icon: Icons.phone,
-                        keyboardType: TextInputType.phone,
-                        validator: (value) {
-                          if (value != null && value.trim().isNotEmpty) {
-                            if (!_isValidPhone(value.trim())) {
-                              return 'Please enter a valid phone number';
-                            }
-                          }
-                          return null;
-                        },
-                        textInputAction: TextInputAction.next,
-                      ),
                     ]),
 
                     const SizedBox(height: 24),
@@ -352,7 +340,9 @@ class _AddLecturerScreenState extends State<AddLecturerScreen> {
                       width: double.infinity,
                       height: AppConstants.buttonHeight,
                       child: OutlinedButton(
-                        onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+                        onPressed: _isSubmitting
+                            ? null
+                            : () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppTheme.textSecondary,
                           side: BorderSide(color: AppTheme.textTertiary),
@@ -420,11 +410,15 @@ class _AddLecturerScreenState extends State<AddLecturerScreen> {
         fillColor: AppTheme.backgroundColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-          borderSide: BorderSide(color: AppTheme.textTertiary.withValues(alpha: 0.3)),
+          borderSide: BorderSide(
+            color: AppTheme.textTertiary.withValues(alpha: 0.3),
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-          borderSide: BorderSide(color: AppTheme.textTertiary.withValues(alpha: 0.3)),
+          borderSide: BorderSide(
+            color: AppTheme.textTertiary.withValues(alpha: 0.3),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.borderRadius),
@@ -468,11 +462,15 @@ class _AddLecturerScreenState extends State<AddLecturerScreen> {
         fillColor: AppTheme.backgroundColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-          borderSide: BorderSide(color: AppTheme.textTertiary.withValues(alpha: 0.3)),
+          borderSide: BorderSide(
+            color: AppTheme.textTertiary.withValues(alpha: 0.3),
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-          borderSide: BorderSide(color: AppTheme.textTertiary.withValues(alpha: 0.3)),
+          borderSide: BorderSide(
+            color: AppTheme.textTertiary.withValues(alpha: 0.3),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.borderRadius),
@@ -488,10 +486,7 @@ class _AddLecturerScreenState extends State<AddLecturerScreen> {
         ),
       ),
       items: options.map((String option) {
-        return DropdownMenuItem<String>(
-          value: option,
-          child: Text(option),
-        );
+        return DropdownMenuItem<String>(value: option, child: Text(option));
       }).toList(),
       validator: validator,
       onChanged: (value) {

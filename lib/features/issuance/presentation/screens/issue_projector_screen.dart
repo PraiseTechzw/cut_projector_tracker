@@ -284,7 +284,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Projector "${widget.projector.projectorName}" issued to ${_selectedLecturer!.name} successfully!',
+                    'Projector "${widget.projector.serialNumber}" issued to ${_selectedLecturer!.name} successfully!',
                   ),
                 ),
               ],
@@ -524,15 +524,6 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
           ),
           const SizedBox(height: 16),
           _buildInfoRow('Serial Number', widget.projector.serialNumber),
-          const SizedBox(height: 8),
-          _buildInfoRow('Model', widget.projector.modelName),
-          const SizedBox(height: 8),
-          _buildInfoRow('Name', widget.projector.projectorName),
-          if (widget.projector.location != null &&
-              widget.projector.location!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            _buildInfoRow('Location', widget.projector.location!),
-          ],
           const SizedBox(height: 8),
           _buildInfoRow('Current Status', widget.projector.status),
         ],

@@ -79,7 +79,7 @@ class _ReturnProjectorScreenState extends ConsumerState<ReturnProjectorScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Projector "${widget.projector.projectorName}" returned successfully!',
+                    'Projector "${widget.projector.serialNumber}" returned successfully!',
                   ),
                 ),
               ],
@@ -317,15 +317,6 @@ class _ReturnProjectorScreenState extends ConsumerState<ReturnProjectorScreen> {
           ),
           const SizedBox(height: 16),
           _buildInfoRow('Serial Number', widget.projector.serialNumber),
-          const SizedBox(height: 8),
-          _buildInfoRow('Model', widget.projector.modelName),
-          const SizedBox(height: 8),
-          _buildInfoRow('Name', widget.projector.projectorName),
-          if (widget.projector.location != null &&
-              widget.projector.location!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            _buildInfoRow('Location', widget.projector.location!),
-          ],
           const SizedBox(height: 8),
           _buildInfoRow('Current Status', widget.projector.status),
         ],

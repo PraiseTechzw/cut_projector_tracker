@@ -19,10 +19,6 @@ class EditProjectorScreen extends ConsumerStatefulWidget {
 class _EditProjectorScreenState extends ConsumerState<EditProjectorScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _serialNumberController;
-  late final TextEditingController _modelNameController;
-  late final TextEditingController _projectorNameController;
-  late final TextEditingController _locationController;
-  late final TextEditingController _notesController;
   late final TextEditingController _statusController;
 
   bool _isLoading = false;
@@ -36,36 +32,16 @@ class _EditProjectorScreenState extends ConsumerState<EditProjectorScreen> {
     _serialNumberController = TextEditingController(
       text: widget.projector.serialNumber,
     );
-    _modelNameController = TextEditingController(
-      text: widget.projector.modelName,
-    );
-    _projectorNameController = TextEditingController(
-      text: widget.projector.projectorName,
-    );
-    _locationController = TextEditingController(
-      text: widget.projector.location ?? '',
-    );
-    _notesController = TextEditingController(
-      text: widget.projector.notes ?? '',
-    );
     _statusController = TextEditingController(text: widget.projector.status);
     _selectedStatus = widget.projector.status;
 
     // Listen for changes to detect if user has made modifications
     _serialNumberController.addListener(_onFieldChanged);
-    _modelNameController.addListener(_onFieldChanged);
-    _projectorNameController.addListener(_onFieldChanged);
-    _locationController.addListener(_onFieldChanged);
-    _notesController.addListener(_onFieldChanged);
   }
 
   @override
   void dispose() {
     _serialNumberController.dispose();
-    _modelNameController.dispose();
-    _projectorNameController.dispose();
-    _locationController.dispose();
-    _notesController.dispose();
     _statusController.dispose();
     super.dispose();
   }
@@ -74,10 +50,6 @@ class _EditProjectorScreenState extends ConsumerState<EditProjectorScreen> {
   void _onFieldChanged() {
     final hasChanges =
         _serialNumberController.text != widget.projector.serialNumber ||
-        _modelNameController.text != widget.projector.modelName ||
-        _projectorNameController.text != widget.projector.projectorName ||
-        _locationController.text != (widget.projector.location ?? '') ||
-        _notesController.text != (widget.projector.notes ?? '') ||
         _selectedStatus != widget.projector.status;
 
     if (hasChanges != _hasChanges) {
@@ -214,64 +186,9 @@ class _EditProjectorScreenState extends ConsumerState<EditProjectorScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Model Name Field
-                _buildEnhancedFormField(
-                  controller: _modelNameController,
-                  label: 'Model Name',
-                  hint: 'Enter projector model name',
-                  icon: Icons.model_training,
-                  helperText: 'e.g., Epson PowerLite, BenQ TH685P',
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Model name is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Projector Name Field
-                _buildEnhancedFormField(
-                  controller: _projectorNameController,
-                  label: 'Projector Name',
-                  hint: 'Enter projector display name',
-                  icon: Icons.label,
-                  helperText: 'e.g., Lab A Projector, Conference Room 1',
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Projector name is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Location Field
-                _buildEnhancedFormField(
-                  controller: _locationController,
-                  label: 'Location',
-                  hint: 'Enter projector location',
-                  icon: Icons.location_on,
-                  helperText: 'e.g., Building A, Floor 2, Room 201',
-                  validator: null, // Optional field
-                ),
-                const SizedBox(height: 20),
-
                 // Status Field
                 _buildEnhancedDropdownField(),
                 const SizedBox(height: 20),
-
-                // Notes Field
-                _buildEnhancedFormField(
-                  controller: _notesController,
-                  label: 'Notes',
-                  hint: 'Enter any additional notes',
-                  icon: Icons.note,
-                  helperText: 'Optional: Any special instructions or details',
-                  validator: null, // Optional field
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 32),
 
                 // System Information Section
                 _buildSystemInfoSection(),
@@ -779,15 +696,7 @@ class _EditProjectorScreenState extends ConsumerState<EditProjectorScreen> {
       // Create updated projector
       final updatedProjector = widget.projector.copyWith(
         serialNumber: _serialNumberController.text.trim().toUpperCase(),
-        modelName: _modelNameController.text.trim(),
-        projectorName: _projectorNameController.text.trim(),
         status: _selectedStatus,
-        location: _locationController.text.trim().isEmpty
-            ? null
-            : _locationController.text.trim(),
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
         updatedAt: DateTime.now(),
       );
 
@@ -804,7 +713,7 @@ class _EditProjectorScreenState extends ConsumerState<EditProjectorScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Projector "${updatedProjector.projectorName}" updated successfully!',
+                    'Projector "${updatedProjector.serialNumber}" updated successfully!',
                   ),
                 ),
               ],
