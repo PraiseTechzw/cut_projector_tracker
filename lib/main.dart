@@ -11,6 +11,10 @@ import 'features/auth/presentation/screens/splash_screen.dart';
 import 'features/auth/presentation/screens/welcome_screen.dart';
 import 'features/auth/presentation/widgets/auth_guard.dart';
 import 'shared/widgets/main_navigation.dart';
+import 'features/scanning/presentation/screens/scanning_screen.dart';
+import 'features/issuance/presentation/screens/issuance_screen.dart';
+import 'features/returns/presentation/screens/returns_screen.dart';
+import 'shared/models/projector.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,6 +60,30 @@ final _router = GoRouter(
         final userName = extra?['userName'] ?? 'User';
         final isNewUser = extra?['isNewUser'] ?? false;
         return WelcomeScreen(userName: userName, isNewUser: isNewUser);
+      },
+    ),
+    GoRoute(
+      path: '/scan-projector',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final purpose = extra?['purpose'] as String?;
+        return ScanningScreen(purpose: purpose);
+      },
+    ),
+    GoRoute(
+      path: '/issue-projector',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final projector = extra?['projector'] as Projector?;
+        return IssuanceScreen(projector: projector);
+      },
+    ),
+    GoRoute(
+      path: '/return-projector',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final projector = extra?['projector'] as Projector?;
+        return ReturnsScreen(projector: projector);
       },
     ),
 

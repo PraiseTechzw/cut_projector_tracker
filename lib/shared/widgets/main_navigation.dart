@@ -22,7 +22,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
-    const ScanningScreen(),
+    const ScanningScreen(purpose: null),
     const IssuanceScreen(),
     const ReturnsScreen(),
     const AssetsScreen(),

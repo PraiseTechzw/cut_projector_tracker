@@ -6,7 +6,7 @@ import 'package:confetti/confetti.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firebase_auth_service.dart';
-import 'welcome_screen.dart';
+
 
 /// Sign up screen for new staff registration
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -68,7 +68,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
       final authService = ref.read(firebaseAuthServiceProvider);
 
       // Create user account
-      final userCredential = await authService.createUserWithEmailAndPassword(
+      await authService.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
