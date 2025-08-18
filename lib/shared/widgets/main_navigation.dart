@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/services/firebase_auth_service.dart';
 import '../../features/assets/presentation/screens/assets_screen.dart';
 import '../../features/history/presentation/screens/history_screen.dart';
+import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/issuance/presentation/screens/issuance_screen.dart';
 import '../../features/returns/presentation/screens/returns_screen.dart';
 import '../../features/scanning/presentation/screens/scanning_screen.dart';
@@ -22,6 +23,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
+    const HomeScreen(),
     const ScanningScreen(purpose: null),
     const IssuanceScreen(),
     const ReturnsScreen(),
@@ -30,6 +32,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   ];
 
   final List<BottomNavigationBarItem> _navItems = [
+    const BottomNavigationBarItem(
+      icon: Icon(Icons.home),
+      label: 'Home',
+    ),
     const BottomNavigationBarItem(
       icon: Icon(Icons.qr_code_scanner),
       label: 'Scan',
@@ -158,14 +164,16 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   String _getAppBarTitle() {
     switch (_currentIndex) {
       case 0:
-        return 'Scan Projector';
+        return 'Home';
       case 1:
-        return 'Issue Projector';
+        return 'Scan Projector';
       case 2:
-        return 'Return Projector';
+        return 'Issue Projector';
       case 3:
-        return 'Asset Register';
+        return 'Return Projector';
       case 4:
+        return 'Asset Register';
+      case 5:
         return 'Transaction History';
       default:
         return AppConstants.appName;

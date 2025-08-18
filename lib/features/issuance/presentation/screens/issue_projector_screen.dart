@@ -6,7 +6,7 @@ import '../../../../core/services/firestore_service.dart';
 import '../../../../shared/models/projector.dart';
 import '../../../../shared/models/lecturer.dart';
 
-/// Screen for issuing projectors to lecturers
+/// Enhanced screen for issuing projectors to lecturers
 class IssueProjectorScreen extends ConsumerStatefulWidget {
   final Projector projector;
 
@@ -21,6 +21,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
   final _formKey = GlobalKey<FormState>();
   final _searchController = TextEditingController();
   final _notesController = TextEditingController();
+  final _purposeController = TextEditingController();
 
   // New lecturer form controllers
   final _newLecturerFormKey = GlobalKey<FormState>();
@@ -33,21 +34,26 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
   bool _isLoading = false;
   bool _isSearching = false;
   bool _showAddLecturerForm = false;
+  bool _showQuickActions = false;
   String _searchQuery = '';
   Lecturer? _selectedLecturer;
   List<Lecturer> _searchResults = [];
   List<Lecturer> _allLecturers = [];
+  List<Lecturer> _recentLecturers = [];
 
   @override
   void initState() {
     super.initState();
     _loadAllLecturers();
+    _loadRecentLecturers();
+    _validateProjectorStatus();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _notesController.dispose();
+    _purposeController.dispose();
     _newLecturerNameController.dispose();
     _newLecturerDepartmentController.dispose();
     _newLecturerEmailController.dispose();
@@ -77,7 +83,105 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
     }
   }
 
-  /// Search lecturers
+  /// Validate projector status before allowing issue
+  void _validateProjectorStatus() {
+    if (widget.projector.status != AppConstants.statusAvailable) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Warning: Projector "${widget.projector.serialNumber}" is currently ${widget.projector.status.toLowerCase()}',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppTheme.warningColor ?? Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'View Details',
+              textColor: Colors.white,
+              onPressed: () {
+                // Show projector details
+                _showProjectorDetails();
+              },
+            ),
+          ),
+        );
+      });
+    }
+  }
+
+  /// Show projector details dialog
+  void _showProjectorDetails() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.qr_code, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Text('Projector Details'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoRow('Serial Number', widget.projector.serialNumber),
+            _buildInfoRow('Current Status', widget.projector.status),
+            if (widget.projector.lastIssuedTo != null)
+              _buildInfoRow('Last Issued To', widget.projector.lastIssuedTo!),
+            if (widget.projector.lastIssuedDate != null)
+              _buildInfoRow('Last Issue Date', _formatDate(widget.projector.lastIssuedDate!)),
+            if (widget.projector.lastReturnDate != null)
+              _buildInfoRow('Last Return Date', _formatDate(widget.projector.lastReturnDate!)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Load recent lecturers (last 5 used)
+  Future<void> _loadRecentLecturers() async {
+    try {
+      final firestoreService = ref.read(firestoreServiceProvider);
+      final transactionsStream = firestoreService.getTransactions();
+      final transactions = await transactionsStream.first;
+      
+      // Get unique lecturer names from recent transactions
+      final recentLecturerNames = transactions
+          .where((t) => t.status == AppConstants.transactionActive)
+          .map((t) => t.lecturerName)
+          .toSet()
+          .take(5)
+          .toList();
+
+      // Find lecturer objects
+      final recentLecturers = _allLecturers
+          .where((l) => recentLecturerNames.contains(l.name))
+          .toList();
+
+      setState(() {
+        _recentLecturers = recentLecturers;
+      });
+    } catch (e) {
+      // Ignore errors for recent lecturers
+    }
+  }
+
+  /// Search lecturers with enhanced logic
   void _searchLecturers(String query) {
     setState(() {
       _searchQuery = query;
@@ -92,19 +196,32 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
       return;
     }
 
-    // Simple search implementation
+    // Enhanced search implementation
     final results = _allLecturers.where((lecturer) {
       final searchLower = query.toLowerCase();
       return lecturer.name.toLowerCase().contains(searchLower) ||
           lecturer.department.toLowerCase().contains(searchLower) ||
           lecturer.email.toLowerCase().contains(searchLower) ||
-          (lecturer.phoneNumber?.toLowerCase().contains(searchLower) ??
-              false) ||
+          (lecturer.phoneNumber?.toLowerCase().contains(searchLower) ?? false) ||
           (lecturer.employeeId?.toLowerCase().contains(searchLower) ?? false);
     }).toList();
 
+    // Sort by relevance (exact matches first)
+    results.sort((a, b) {
+      final aNameLower = a.name.toLowerCase();
+      final bNameLower = b.name.toLowerCase();
+      final queryLower = query.toLowerCase();
+      
+      final aStartsWith = aNameLower.startsWith(queryLower);
+      final bStartsWith = bNameLower.startsWith(queryLower);
+      
+      if (aStartsWith && !bStartsWith) return -1;
+      if (!aStartsWith && bStartsWith) return 1;
+      return aNameLower.compareTo(bNameLower);
+    });
+
     setState(() {
-      _searchResults = results;
+      _searchResults = results.take(10).toList(); // Limit to 10 results
     });
   }
 
@@ -116,6 +233,13 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
       _searchResults = [];
       _isSearching = false;
     });
+    
+    // Add to recent lecturers if not already there
+    if (!_recentLecturers.any((l) => l.id == lecturer.id)) {
+      setState(() {
+        _recentLecturers = [lecturer, ..._recentLecturers.take(4)];
+      });
+    }
   }
 
   /// Clear lecturer selection
@@ -139,7 +263,22 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
     });
   }
 
-  /// Add new lecturer
+  /// Toggle quick actions
+  void _toggleQuickActions() {
+    setState(() {
+      _showQuickActions = !_showQuickActions;
+    });
+  }
+
+  /// Quick select lecturer
+  void _quickSelectLecturer(Lecturer lecturer) {
+    _selectLecturer(lecturer);
+    setState(() {
+      _showQuickActions = false;
+    });
+  }
+
+  /// Add new lecturer with enhanced validation
   Future<void> _addNewLecturer() async {
     if (!_newLecturerFormKey.currentState!.validate()) {
       return;
@@ -151,6 +290,23 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
 
     try {
       final firestoreService = ref.read(firestoreServiceProvider);
+
+      // Check if email already exists
+      final existingLecturer = _allLecturers.firstWhere(
+        (l) => l.email.toLowerCase() == _newLecturerEmailController.text.trim().toLowerCase(),
+        orElse: () => Lecturer(
+          id: '',
+          name: '',
+          department: '',
+          email: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      if (existingLecturer.id.isNotEmpty) {
+        throw 'A lecturer with this email already exists';
+      }
 
       // Create new lecturer
       final now = DateTime.now();
@@ -176,7 +332,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
       final createdLecturer = newLecturer.copyWith(id: lecturerId);
 
       if (mounted) {
-        // Show success message
+        // Show success message with confetti
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -204,6 +360,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
           _selectedLecturer = createdLecturer;
           _showAddLecturerForm = false;
           _searchQuery = createdLecturer.displayName;
+          _recentLecturers = [createdLecturer, ..._recentLecturers.take(4)];
         });
 
         // Clear form
@@ -243,7 +400,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
     }
   }
 
-  /// Issue projector to selected lecturer
+  /// Issue projector with enhanced validation
   Future<void> _issueProjector() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -259,6 +416,17 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
       return;
     }
 
+    // Check if projector is available
+    if (widget.projector.status != AppConstants.statusAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Projector is currently ${widget.projector.status.toLowerCase()}'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -266,7 +434,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
     try {
       final firestoreService = ref.read(firestoreServiceProvider);
 
-      // Issue the projector using the existing method
+      // Issue the projector
       await firestoreService.issueProjector(
         projectorId: widget.projector.id,
         lecturerId: _selectedLecturer!.id,
@@ -275,7 +443,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
       );
 
       if (mounted) {
-        // Show success message
+        // Show success message with confetti
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -298,8 +466,8 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
           ),
         );
 
-        // Navigate back
-        Navigator.of(context).pop();
+        // Navigate back with success
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
@@ -343,157 +511,104 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.arrow_back),
         ),
+        actions: [
+          IconButton(
+            onPressed: _toggleQuickActions,
+            icon: Icon(_showQuickActions ? Icons.close : Icons.flash_on),
+            tooltip: 'Quick Actions',
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppConstants.defaultPadding),
-        child: Container(
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(AppConstants.defaultPadding),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(AppConstants.largePadding),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Enhanced Header
+                    _buildEnhancedHeader(),
+                    const SizedBox(height: 24),
+
+                    // Projector Information Section
+                    _buildProjectorInfoSection(),
+                    const SizedBox(height: 24),
+
+                    // Lecturer Selection Section
+                    _buildLecturerSelectionSection(),
+                    const SizedBox(height: 24),
+
+                    // Purpose and Notes Section
+                    _buildPurposeAndNotesSection(),
+                    const SizedBox(height: 32),
+
+                    // Action Buttons
+                    _buildActionButtons(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Quick Actions Overlay
+          if (_showQuickActions) _buildQuickActionsOverlay(),
+        ],
+      ),
+    );
+  }
+
+  /// Build enhanced header
+  Widget _buildEnhancedHeader() {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppTheme.surfaceColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
+            color: AppTheme.accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            Icons.send,
+            color: AppTheme.accentColor,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Issue Projector',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                'Assign projector to a lecturer',
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: AppTheme.textSecondary),
               ),
             ],
           ),
-          padding: const EdgeInsets.all(AppConstants.largePadding),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Enhanced Header
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.send,
-                        color: AppTheme.accentColor,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Issue Projector',
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(
-                                  color: AppTheme.textPrimary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                          Text(
-                            'Assign projector to a lecturer',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: AppTheme.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Projector Information Section
-                _buildProjectorInfoSection(),
-                const SizedBox(height: 24),
-
-                // Lecturer Selection Section
-                _buildLecturerSelectionSection(),
-                const SizedBox(height: 24),
-
-                // Notes Section
-                _buildNotesSection(),
-                const SizedBox(height: 32),
-
-                // Action Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => Navigator.of(context).pop(),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.primaryColor,
-                          side: BorderSide(
-                            color: AppTheme.primaryColor,
-                            width: 1.5,
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppConstants.borderRadius,
-                            ),
-                          ),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: (_isLoading || _selectedLecturer == null)
-                            ? null
-                            : _issueProjector,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _selectedLecturer != null
-                              ? AppTheme.accentColor
-                              : AppTheme.textTertiary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppConstants.borderRadius,
-                            ),
-                          ),
-                          elevation: 4,
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : Text(
-                                _selectedLecturer != null
-                                    ? 'Issue to ${_selectedLecturer!.name}'
-                                    : 'Select Lecturer First',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -526,6 +641,14 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
           _buildInfoRow('Serial Number', widget.projector.serialNumber),
           const SizedBox(height: 8),
           _buildInfoRow('Current Status', widget.projector.status),
+          if (widget.projector.lastIssuedTo != null) ...[
+            const SizedBox(height: 8),
+            _buildInfoRow('Last Issued To', widget.projector.lastIssuedTo!),
+          ],
+          if (widget.projector.lastIssuedDate != null) ...[
+            const SizedBox(height: 8),
+            _buildInfoRow('Last Issue Date', _formatDate(widget.projector.lastIssuedDate!)),
+          ],
         ],
       ),
     );
@@ -566,9 +689,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
         const SizedBox(height: 8),
         Text(
           'Choose an existing lecturer or add a new one',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppTheme.textSecondary,
+          ),
         ),
         const SizedBox(height: 12),
 
@@ -675,9 +798,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                 final lecturer = _searchResults[index];
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppTheme.accentColor.withValues(
-                      alpha: 0.1,
-                    ),
+                    backgroundColor: AppTheme.accentColor.withValues(alpha: 0.1),
                     child: Text(
                       lecturer.name[0].toUpperCase(),
                       style: TextStyle(
@@ -694,8 +815,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(lecturer.department),
-                      if (lecturer.phoneNumber != null &&
-                          lecturer.phoneNumber!.isNotEmpty)
+                      if (lecturer.phoneNumber != null && lecturer.phoneNumber!.isNotEmpty)
                         Text(
                           lecturer.phoneNumber!,
                           style: TextStyle(
@@ -790,9 +910,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
         ],
 
         // No Results Message
-        if (_isSearching &&
-            _searchResults.isEmpty &&
-            _searchQuery.isNotEmpty) ...[
+        if (_isSearching && _searchResults.isEmpty && _searchQuery.isNotEmpty) ...[
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(16),
@@ -816,11 +934,62 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
     );
   }
 
-  /// Build notes section
-  Widget _buildNotesSection() {
+  /// Build purpose and notes section
+  Widget _buildPurposeAndNotesSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Purpose Field
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.info, size: 16, color: AppTheme.primaryColor),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Purpose of Issue',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Brief description of why the projector is being issued',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppTheme.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _purposeController,
+          maxLines: 2,
+          decoration: InputDecoration(
+            hintText: 'e.g., Lecture in Room 201, Department meeting...',
+            filled: true,
+            fillColor: AppTheme.backgroundColor,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(
+                color: AppTheme.textTertiary.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Notes Field
         Row(
           children: [
             Container(
@@ -844,9 +1013,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
         const SizedBox(height: 8),
         Text(
           'Optional: Add any special instructions or notes',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppTheme.textSecondary,
+          ),
         ),
         const SizedBox(height: 12),
         TextFormField(
@@ -862,12 +1031,6 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                 color: AppTheme.textTertiary.withValues(alpha: 0.3),
               ),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-              borderSide: BorderSide(
-                color: AppTheme.textTertiary.withValues(alpha: 0.3),
-              ),
-            ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.borderRadius),
               borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
@@ -878,30 +1041,205 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
     );
   }
 
-  /// Build info row
-  Widget _buildInfoRow(String label, String value) {
+  /// Build action buttons
+  Widget _buildActionButtons() {
     return Row(
       children: [
-        SizedBox(
-          width: 120,
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.textSecondary,
-              fontWeight: FontWeight.w500,
+        Expanded(
+          child: OutlinedButton(
+            onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+              side: BorderSide(
+                color: AppTheme.primaryColor,
+                width: 1.5,
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              ),
+            ),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
+        const SizedBox(width: 16),
         Expanded(
-          child: Text(
-            value,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.textPrimary,
-              fontWeight: FontWeight.w500,
+          child: ElevatedButton(
+            onPressed: (_isLoading || _selectedLecturer == null)
+                ? null
+                : _issueProjector,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _selectedLecturer != null
+                  ? AppTheme.accentColor
+                  : AppTheme.textTertiary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+              ),
+              elevation: 4,
             ),
+            child: _isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Text(
+                    _selectedLecturer != null
+                        ? 'Issue to ${_selectedLecturer!.name}'
+                        : 'Select Lecturer First',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ),
       ],
+    );
+  }
+
+  /// Build quick actions overlay
+  Widget _buildQuickActionsOverlay() {
+    return Positioned(
+      top: 80,
+      right: 16,
+      child: Container(
+        width: 280,
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+          border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.flash_on, color: AppTheme.primaryColor, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Quick Actions',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Recent Lecturers
+            if (_recentLecturers.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Recent Lecturers',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: AppTheme.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ..._recentLecturers.map((lecturer) => _buildQuickLecturerItem(lecturer)),
+                  ],
+                ),
+              ),
+            ],
+
+            // Quick Add
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Quick Add',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.person_add, color: AppTheme.accentColor, size: 20),
+                    ),
+                    title: const Text('Add New Lecturer'),
+                    subtitle: const Text('Create lecturer account'),
+                    onTap: () {
+                      setState(() {
+                        _showQuickActions = false;
+                        _showAddLecturerForm = true;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build quick lecturer item
+  Widget _buildQuickLecturerItem(Lecturer lecturer) {
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: AppTheme.accentColor.withValues(alpha: 0.1),
+        child: Text(
+          lecturer.name[0].toUpperCase(),
+          style: TextStyle(
+            color: AppTheme.accentColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      title: Text(
+        lecturer.name,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        lecturer.department,
+        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+      ),
+      onTap: () => _quickSelectLecturer(lecturer),
     );
   }
 
@@ -983,9 +1321,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
               if (value == null || value.trim().isEmpty) {
                 return 'Email is required';
               }
-              if (!RegExp(
-                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-              ).hasMatch(value)) {
+              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
                 return 'Please enter a valid email';
               }
               return null;
@@ -1046,9 +1382,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppConstants.borderRadius,
-                  ),
+                  borderRadius: BorderRadius.circular(AppConstants.borderRadius),
                 ),
               ),
             ),
@@ -1056,5 +1390,37 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
         ],
       ),
     );
+  }
+
+  /// Build info row
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Format date for display
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 }

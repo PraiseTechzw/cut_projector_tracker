@@ -14,7 +14,13 @@ import 'shared/widgets/main_navigation.dart';
 import 'features/scanning/presentation/screens/scanning_screen.dart';
 import 'features/issuance/presentation/screens/issuance_screen.dart';
 import 'features/returns/presentation/screens/returns_screen.dart';
+import 'features/assets/presentation/screens/add_projector_screen.dart';
+import 'features/assets/presentation/screens/edit_projector_screen.dart';
+import 'features/lecturers/presentation/screens/add_lecturer_screen.dart';
+import 'features/lecturers/presentation/screens/edit_lecturer_screen.dart';
+import 'features/lecturers/presentation/screens/lecturers_screen.dart';
 import 'shared/models/projector.dart';
+import 'shared/models/lecturer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,6 +91,45 @@ final _router = GoRouter(
         final projector = extra?['projector'] as Projector?;
         return ReturnsScreen(projector: projector);
       },
+    ),
+    GoRoute(
+      path: '/add-projector',
+      builder: (context, state) =>
+          const AuthGuard(requireAuth: true, child: AddProjectorScreen()),
+    ),
+    GoRoute(
+      path: '/edit-projector',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final projector = extra?['projector'] as Projector?;
+        if (projector == null) return const _ErrorScreen(error: 'Projector not found');
+        return AuthGuard(
+          requireAuth: true,
+          child: EditProjectorScreen(projector: projector),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/add-lecturer',
+      builder: (context, state) =>
+          const AuthGuard(requireAuth: true, child: AddLecturerScreen()),
+    ),
+    GoRoute(
+      path: '/edit-lecturer',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final lecturer = extra?['lecturer'] as Lecturer?;
+        if (lecturer == null) return const _ErrorScreen(error: 'Lecturer not found');
+        return AuthGuard(
+          requireAuth: true,
+          child: EditLecturerScreen(lecturer: lecturer),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/lecturers',
+      builder: (context, state) =>
+          const AuthGuard(requireAuth: true, child: LecturersScreen()),
     ),
 
     // Protected routes (auth required)
