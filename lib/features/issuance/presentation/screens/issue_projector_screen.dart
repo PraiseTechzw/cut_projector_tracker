@@ -736,7 +736,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
 
     // Step 2: Validate lecturer selection
     if (_selectedLecturer == null) {
-      _showValidationError('Please select a lecturer to issue the projector to.');
+      _showValidationError(
+        'Please select a lecturer to issue the projector to.',
+      );
       return;
     }
 
@@ -750,7 +752,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
 
     // Step 4: Validate purpose field (make it required)
     if (_purposeController.text.trim().isEmpty) {
-      _showValidationError('Please specify the purpose for issuing this projector.');
+      _showValidationError(
+        'Please specify the purpose for issuing this projector.',
+      );
       return;
     }
 
@@ -789,7 +793,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
       if (mounted) {
         // Show enhanced success message
         _showSuccessMessage();
-        
+
         // Navigate back with success after a brief delay
         await Future.delayed(const Duration(seconds: 2));
         if (mounted) {
@@ -833,15 +837,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                 children: [
                   const Text(
                     'Validation Error',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
-                  Text(
-                    message,
-                    style: const TextStyle(fontSize: 13),
-                  ),
+                  Text(message, style: const TextStyle(fontSize: 13)),
                 ],
               ),
             ),
@@ -861,141 +859,149 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
   /// Show confirmation dialog before issuing
   Future<bool> _showConfirmationDialog() async {
     return await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.confirmation_number,
-                  color: AppTheme.primaryColor,
-                  size: 24,
-                ),
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
               ),
-              const SizedBox(width: 12),
-              const Text('Confirm Projector Issue'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Please confirm the following details before issuing:',
-                style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 20),
-              
-              // Projector details
-              _buildConfirmationItem(
-                'Projector',
-                _selectedProjector!.serialNumber,
-                Icons.qr_code,
-                AppTheme.primaryColor,
-              ),
-              const SizedBox(height: 12),
-              
-              // Lecturer details
-              _buildConfirmationItem(
-                'Issuing To',
-                '${_selectedLecturer!.name} (${_selectedLecturer!.department})',
-                Icons.person,
-                AppTheme.accentColor,
-              ),
-              const SizedBox(height: 12),
-              
-              // Purpose
-              _buildConfirmationItem(
-                'Purpose',
-                _purposeController.text.trim(),
-                Icons.assignment,
-                AppTheme.secondaryColor,
-              ),
-              
-              // Notes if provided
-              if (_notesController.text.trim().isNotEmpty) ...[
-                const SizedBox(height: 12),
-                _buildConfirmationItem(
-                  'Notes',
-                  _notesController.text.trim(),
-                  Icons.note,
-                  AppTheme.textSecondary,
-                ),
-              ],
-              
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: AppTheme.primaryColor,
-                      size: 16,
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'This action will mark the projector as "Issued" and update the inventory status.',
-                        style: TextStyle(
-                          color: AppTheme.primaryColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                    child: Icon(
+                      Icons.confirmation_number,
+                      color: AppTheme.primaryColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Confirm Projector Issue'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Please confirm the following details before issuing:',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Projector details
+                  _buildConfirmationItem(
+                    'Projector',
+                    _selectedProjector!.serialNumber,
+                    Icons.qr_code,
+                    AppTheme.primaryColor,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Lecturer details
+                  _buildConfirmationItem(
+                    'Issuing To',
+                    '${_selectedLecturer!.name} (${_selectedLecturer!.department})',
+                    Icons.person,
+                    AppTheme.accentColor,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Purpose
+                  _buildConfirmationItem(
+                    'Purpose',
+                    _purposeController.text.trim(),
+                    Icons.assignment,
+                    AppTheme.secondaryColor,
+                  ),
+
+                  // Notes if provided
+                  if (_notesController.text.trim().isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _buildConfirmationItem(
+                      'Notes',
+                      _notesController.text.trim(),
+                      Icons.note,
+                      AppTheme.textSecondary,
                     ),
                   ],
+
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: AppTheme.primaryColor,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'This action will mark the projector as "Issued" and update the inventory status.',
+                            style: TextStyle(
+                              color: AppTheme.primaryColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(color: AppTheme.textSecondary),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: AppTheme.textSecondary),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.borderRadius,
+                      ),
+                    ),
+                  ),
+                  child: const Text('Confirm & Issue'),
                 ),
-              ),
-              child: const Text('Confirm & Issue'),
-            ),
-          ],
-        );
-      },
-    ) ?? false;
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 
   /// Build confirmation item for the dialog
-  Widget _buildConfirmationItem(String label, String value, IconData icon, Color color) {
+  Widget _buildConfirmationItem(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Row(
       children: [
         Container(
@@ -1115,15 +1121,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                 children: [
                   const Text(
                     'Issue Failed',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
-                  Text(
-                    message,
-                    style: const TextStyle(fontSize: 13),
-                  ),
+                  Text(message, style: const TextStyle(fontSize: 13)),
                 ],
               ),
             ),
@@ -1277,11 +1277,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
         children: [
           Row(
             children: [
-              Icon(
-                Icons.track_changes,
-                color: AppTheme.primaryColor,
-                size: 20,
-              ),
+              Icon(Icons.track_changes, color: AppTheme.primaryColor, size: 20),
               const SizedBox(width: 12),
               Text(
                 'Issuance Progress',
@@ -1308,7 +1304,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                 ),
               ),
               _buildStepConnector(_selectedProjector != null),
-              
+
               // Step 2: Lecturer Selection
               Expanded(
                 child: _buildStepItem(
@@ -1321,7 +1317,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                 ),
               ),
               _buildStepConnector(_selectedLecturer != null),
-              
+
               // Step 3: Purpose & Notes
               Expanded(
                 child: _buildStepItem(
@@ -1334,7 +1330,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                 ),
               ),
               _buildStepConnector(_purposeController.text.trim().isNotEmpty),
-              
+
               // Step 4: Confirmation
               Expanded(
                 child: _buildStepItem(
@@ -1342,9 +1338,10 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                   title: 'Confirm',
                   subtitle: 'Review & issue',
                   isCompleted: false,
-                  isActive: _selectedProjector != null && 
-                           _selectedLecturer != null && 
-                           _purposeController.text.trim().isNotEmpty,
+                  isActive:
+                      _selectedProjector != null &&
+                      _selectedLecturer != null &&
+                      _purposeController.text.trim().isNotEmpty,
                   icon: Icons.check_circle,
                 ),
               ),
@@ -1364,39 +1361,28 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
     required bool isActive,
     required IconData icon,
   }) {
-    final color = isCompleted || isActive 
-        ? AppTheme.primaryColor 
+    final color = isCompleted || isActive
+        ? AppTheme.primaryColor
         : AppTheme.textTertiary;
-    
+
     return Column(
       children: [
         Container(
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: isCompleted 
-                ? AppTheme.primaryColor 
-                : isActive 
-                    ? AppTheme.primaryColor.withValues(alpha: 0.1)
-                    : AppTheme.textTertiary.withValues(alpha: 0.1),
+            color: isCompleted
+                ? AppTheme.primaryColor
+                : isActive
+                ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                : AppTheme.textTertiary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: color,
-              width: isActive ? 2 : 1,
-            ),
+            border: Border.all(color: color, width: isActive ? 2 : 1),
           ),
           child: Center(
             child: isCompleted
-                ? Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 20,
-                  )
-                : Icon(
-                    icon,
-                    color: color,
-                    size: 20,
-                  ),
+                ? Icon(Icons.check, color: Colors.white, size: 20)
+                : Icon(icon, color: color, size: 20),
           ),
         ),
         const SizedBox(height: 8),
@@ -1429,8 +1415,8 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
       height: 2,
       margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: isCompleted 
-            ? AppTheme.primaryColor 
+        color: isCompleted
+            ? AppTheme.primaryColor
             : AppTheme.textTertiary.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(1),
       ),
@@ -2619,7 +2605,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                   color: AppTheme.backgroundColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: _purposeController.text.trim().isEmpty && _purposeController.text.isNotEmpty
+                    color:
+                        _purposeController.text.trim().isEmpty &&
+                            _purposeController.text.isNotEmpty
                         ? AppTheme.errorColor.withValues(alpha: 0.5)
                         : AppTheme.textTertiary.withValues(alpha: 0.2),
                   ),
