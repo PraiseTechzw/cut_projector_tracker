@@ -5,6 +5,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../shared/models/projector.dart';
+import 'projector_details_screen.dart';
 
 /// Asset register screen showing all projectors with their status
 class AssetsScreen extends ConsumerStatefulWidget {
@@ -158,69 +159,63 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
           ),
         ),
       ),
-      body: Stack(
-        children: [
-          // Background gradient
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppTheme.primaryColor.withValues(alpha: 0.05),
-                  AppTheme.backgroundColor,
-                ],
-              ),
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppTheme.primaryColor.withValues(alpha: 0.05),
+              AppTheme.backgroundColor,
+            ],
           ),
+        ),
+        child: Column(
+          children: [
+            // Search and filter bar
+            _buildSearchAndFilterBar(),
 
-          Column(
-            children: [
-              // Search and filter bar
-              _buildSearchAndFilterBar(),
-
-              // Projectors table
-              Expanded(
-                child: projectorsStream.when(
-                  data: (projectors) => SingleChildScrollView(
-                    child: _buildProjectorsTable(projectors),
-                  ),
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppTheme.primaryColor,
-                      ),
-                    ),
-                  ),
-                  error: (error, stack) => Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: AppTheme.errorColor,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error loading projectors',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(color: AppTheme.errorColor),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          error.toString(),
-                          style: TextStyle(color: AppTheme.textSecondary),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+            // Projectors table - Full screen
+            Expanded(
+              child: projectorsStream.when(
+                data: (projectors) => SingleChildScrollView(
+                  child: _buildProjectorsTable(projectors),
+                ),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppTheme.primaryColor,
                     ),
                   ),
                 ),
+                error: (error, stack) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: AppTheme.errorColor,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading projectors',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(color: AppTheme.errorColor),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        error.toString(),
+                        style: TextStyle(color: AppTheme.textSecondary),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddProjectorDialog(),
@@ -574,6 +569,39 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
         // Enhanced Summary Header
         _buildSummaryHeader(),
 
+        // Interactive Table Hint
+        Container(
+          margin: const EdgeInsets.symmetric(
+            horizontal: AppConstants.defaultPadding,
+            vertical: 8,
+          ),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppTheme.accentColor.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.touch_app, color: AppTheme.accentColor, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '💡 Tap on any row to view detailed information',
+                  style: TextStyle(
+                    color: AppTheme.accentColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
         // Professional Data Table
         _buildProfessionalTable(paginatedProjectors),
 
@@ -780,103 +808,142 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
               return DataRow(
                 cells: [
                   DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                          width: 1.5,
+                    InkWell(
+                      onTap: () => _navigateToProjectorDetails(projector),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
                         ),
-                      ),
-                      child: Text(
-                        projector.serialNumber,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primaryColor,
-                          fontFamily: 'monospace',
-                          fontSize: 14,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                            width: 1.5,
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                  DataCell(_buildStatusChip(projector.status)),
-                  DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppTheme.accentColor.withValues(alpha: 0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Text(
-                        projector.lastIssuedTo ?? 'N/A',
-                        style: TextStyle(
-                          color: AppTheme.accentColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              projector.serialNumber,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primaryColor,
+                                fontFamily: 'monospace',
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 12,
+                              color: AppTheme.primaryColor.withValues(
+                                alpha: 0.6,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
                   DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.textSecondary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppTheme.textSecondary.withValues(alpha: 0.2),
-                          width: 1,
+                    InkWell(
+                      onTap: () => _navigateToProjectorDetails(projector),
+                      borderRadius: BorderRadius.circular(8),
+                      child: _buildStatusChip(projector.status),
+                    ),
+                  ),
+                  DataCell(
+                    InkWell(
+                      onTap: () => _navigateToProjectorDetails(projector),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
                         ),
-                      ),
-                      child: Text(
-                        projector.lastIssuedDate != null
-                            ? _formatDate(projector.lastIssuedDate!)
-                            : 'N/A',
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppTheme.accentColor.withValues(alpha: 0.3),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Text(
+                          projector.lastIssuedTo ?? 'N/A',
+                          style: TextStyle(
+                            color: AppTheme.accentColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ),
                   ),
                   DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.textSecondary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppTheme.textSecondary.withValues(alpha: 0.2),
-                          width: 1,
+                    InkWell(
+                      onTap: () => _navigateToProjectorDetails(projector),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.textSecondary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppTheme.textSecondary.withValues(
+                              alpha: 0.2,
+                            ),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          projector.lastIssuedDate != null
+                              ? _formatDate(projector.lastIssuedDate!)
+                              : 'N/A',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                      child: Text(
-                        projector.lastReturnDate != null
-                            ? _formatDate(projector.lastReturnDate!)
-                            : 'N/A',
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  DataCell(
+                    InkWell(
+                      onTap: () => _navigateToProjectorDetails(projector),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.textSecondary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppTheme.textSecondary.withValues(
+                              alpha: 0.2,
+                            ),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          projector.lastReturnDate != null
+                              ? _formatDate(projector.lastReturnDate!)
+                              : 'N/A',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ),
@@ -1290,6 +1357,15 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
   /// Check if screen is small for responsive layout
   bool get _isSmallScreen {
     return MediaQuery.of(context).size.width < 600;
+  }
+
+  /// Navigate to projector details screen
+  void _navigateToProjectorDetails(Projector projector) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ProjectorDetailsScreen(projector: projector),
+      ),
+    );
   }
 
   DataColumn _buildSortableColumn(String label, String sortKey) {
