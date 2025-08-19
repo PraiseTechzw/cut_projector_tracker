@@ -26,8 +26,7 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
   Projector? _selectedProjector;
   ProjectorTransaction? _activeTransaction;
   bool _isLoading = false;
-  bool _isScanning = false;
-  bool _isTransactionLoading = false;
+
   String? _errorMessage;
   String? _successMessage;
   String? _scanStatus;
@@ -35,6 +34,12 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
   // Form controllers
   final _returnNotesController = TextEditingController();
   final _searchController = TextEditingController();
+
+  // Projector listing
+  List<Projector> _issuedProjectors = [];
+  List<Projector> _filteredProjectors = [];
+  bool _isLoadingProjectors = false;
+  bool _showProjectorList = false;
 
   // Confetti controller
   late ConfettiController _confettiController;
@@ -50,7 +55,7 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
   late Animation<double> _pulseAnimation;
 
   // Smart suggestions
-  List<String> _returnNoteSuggestions = [
+  final List<String> _returnNoteSuggestions = [
     'Projector in good condition',
     'Minor wear and tear',
     'Lens cleaned',
@@ -70,6 +75,8 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
     if (_selectedProjector != null) {
       _lookupActiveTransaction();
     }
+    // Load issued projectors for listing
+    _loadIssuedProjectors();
   }
 
   void _setupAnimations() {
@@ -120,6 +127,69 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
     );
   }
 
+  /// Load all issued projectors from Firestore
+  Future<void> _loadIssuedProjectors() async {
+    setState(() {
+      _isLoadingProjectors = true;
+    });
+
+    try {
+      final firestoreService = ref.read(firestoreServiceProvider);
+      final projectorsStream = firestoreService.getProjectors();
+
+      await for (final projectors in projectorsStream) {
+        final issuedProjectors = projectors
+            .where((projector) => projector.status == AppConstants.statusIssued)
+            .toList();
+
+        setState(() {
+          _issuedProjectors = issuedProjectors;
+          _filteredProjectors = issuedProjectors;
+          _isLoadingProjectors = false;
+        });
+        break; // Exit after first successful load
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingProjectors = false;
+        _errorMessage = 'Error loading issued projectors: $e';
+      });
+    }
+  }
+
+  /// Filter projectors based on search query
+  void _filterProjectors(String query) {
+    if (query.isEmpty) {
+      setState(() {
+        _filteredProjectors = _issuedProjectors;
+      });
+    } else {
+      final filtered = _issuedProjectors.where((projector) {
+        return projector.serialNumber.toLowerCase().contains(
+              query.toLowerCase(),
+            ) ||
+            projector.modelName.toLowerCase().contains(query.toLowerCase()) ||
+            projector.projectorName.toLowerCase().contains(query.toLowerCase());
+      }).toList();
+
+      setState(() {
+        _filteredProjectors = filtered;
+      });
+    }
+  }
+
+  /// Select a projector from the list
+  void _selectProjectorFromList(Projector projector) {
+    setState(() {
+      _selectedProjector = projector;
+      _activeTransaction = null;
+      _showProjectorList = false;
+    });
+
+    // Look up the transaction for the selected projector
+    _lookupActiveTransaction();
+  }
+
   @override
   void dispose() {
     _returnNotesController.dispose();
@@ -134,7 +204,6 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
 
   Future<void> _scanProjector() async {
     setState(() {
-      _isScanning = true;
       _scanStatus = 'Scanning projector...';
       _errorMessage = null;
     });
@@ -169,9 +238,7 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
         _scanStatus = null;
       });
     } finally {
-      setState(() {
-        _isScanning = false;
-      });
+      // Scanning completed
     }
   }
 
@@ -223,7 +290,6 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
     if (_selectedProjector == null) return;
 
     setState(() {
-      _isTransactionLoading = true;
       _errorMessage = null;
     });
 
@@ -243,7 +309,6 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
         if (activeTransaction != null) {
           setState(() {
             _activeTransaction = activeTransaction;
-            _isTransactionLoading = false;
           });
 
           // Auto-fill return notes with intelligent suggestions
@@ -254,12 +319,10 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
 
       // If we reach here, no active transaction was found
       setState(() {
-        _isTransactionLoading = false;
         _errorMessage = 'No active transaction found for this projector';
       });
     } catch (e) {
       setState(() {
-        _isTransactionLoading = false;
         _errorMessage = 'Error looking up transaction: $e';
       });
     }
@@ -418,6 +481,51 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
 
   /// Navigate to detailed return screen
   void _navigateToDetailedReturn() {
+    if (_selectedProjector != null && _activeTransaction != null) {
+      Navigator.of(context)
+          .push(
+            MaterialPageRoute(
+              builder: (context) => ReturnProjectorScreen(
+                projector: _selectedProjector!,
+                activeTransaction: _activeTransaction,
+              ),
+            ),
+          )
+          .then((result) {
+            // Handle return result
+            if (result == true) {
+              // Return was successful, show success message
+              setState(() {
+                _successMessage = 'Projector returned successfully!';
+              });
+
+              // Play confetti
+              _confettiController.play();
+
+              // Reset form after a delay
+              Future.delayed(const Duration(seconds: 2), () {
+                if (mounted) {
+                  _resetForm();
+                }
+              });
+            }
+          });
+    }
+  }
+
+  /// Toggle projector selection list
+  void _navigateToProjectorSelection() {
+    setState(() {
+      _showProjectorList = !_showProjectorList;
+      if (_showProjectorList) {
+        _searchController.clear();
+        _filteredProjectors = _issuedProjectors;
+      }
+    });
+  }
+
+  /// Navigate to detailed return screen with current projector
+  void _navigateToDetailedReturnScreen() {
     if (_selectedProjector != null && _activeTransaction != null) {
       Navigator.of(context)
           .push(
@@ -658,8 +766,18 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
                           _buildEnhancedHeader(),
                           const SizedBox(height: 24),
 
+                          // Progress Steps
+                          _buildProgressSteps(),
+                          const SizedBox(height: 24),
+
                           // Projector Selection
                           _buildProjectorSelection(),
+
+                          // Projector List (when showProjectorList is true)
+                          if (_showProjectorList) ...[
+                            const SizedBox(height: 24),
+                            _buildProjectorList(),
+                          ],
 
                           // Scanning Status
                           if (_scanStatus != null) _buildScanStatus(),
@@ -669,6 +787,11 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
                           // Transaction Details
                           if (_activeTransaction != null)
                             _buildTransactionDetails(),
+
+                          const SizedBox(height: 24),
+
+                          // Connection Status
+                          _buildConnectionStatus(),
 
                           const SizedBox(height: 24),
 
@@ -698,6 +821,129 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Build progress steps indicator
+  Widget _buildProgressSteps() {
+    final currentStep = _selectedProjector == null
+        ? 1
+        : _activeTransaction == null
+        ? 2
+        : 3;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.textTertiary.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Return Process Progress',
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              _buildStepItem(
+                1,
+                'Select Projector',
+                Icons.qr_code_scanner,
+                currentStep >= 1,
+              ),
+              _buildStepConnector(currentStep >= 2),
+              _buildStepItem(
+                2,
+                'Load Transaction',
+                Icons.receipt_long,
+                currentStep >= 2,
+              ),
+              _buildStepConnector(currentStep >= 3),
+              _buildStepItem(
+                3,
+                'Process Return',
+                Icons.assignment_return,
+                currentStep >= 3,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepItem(
+    int step,
+    String label,
+    IconData icon,
+    bool isCompleted,
+  ) {
+    return Expanded(
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: isCompleted
+                  ? AppTheme.secondaryColor
+                  : AppTheme.textTertiary.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: isCompleted
+                    ? AppTheme.secondaryColor
+                    : AppTheme.textTertiary.withValues(alpha: 0.2),
+                width: 2,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: isCompleted ? Colors.white : AppTheme.textSecondary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: isCompleted
+                  ? AppTheme.secondaryColor
+                  : AppTheme.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepConnector(bool isActive) {
+    return Container(
+      width: 20,
+      height: 2,
+      decoration: BoxDecoration(
+        color: isActive
+            ? AppTheme.secondaryColor
+            : AppTheme.textTertiary.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(1),
       ),
     );
   }
@@ -838,44 +1084,6 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.secondaryColor.withOpacity(0.1),
-            AppTheme.primaryColor.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.secondaryColor.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.keyboard_return, size: 48, color: AppTheme.secondaryColor),
-          const SizedBox(height: 16),
-          Text(
-            'Return Projector',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: AppTheme.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Process the return of a projector from a lecturer',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildProjectorSelection() {
     if (_selectedProjector == null) {
       return Container(
@@ -960,25 +1168,60 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
               ),
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _scanProjector,
-                icon: const Icon(Icons.qr_code_scanner),
-                label: const Text('Scan Projector'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.secondaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppConstants.borderRadius,
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _scanProjector,
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scan Projector'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.secondaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.borderRadius,
+                        ),
+                      ),
+                      elevation: 4,
+                      shadowColor: AppTheme.secondaryColor.withValues(
+                        alpha: 0.3,
+                      ),
                     ),
                   ),
-                  elevation: 4,
-                  shadowColor: AppTheme.secondaryColor.withValues(alpha: 0.3),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _navigateToProjectorSelection,
+                    icon: Icon(_showProjectorList ? Icons.close : Icons.list),
+                    label: Text(
+                      _showProjectorList
+                          ? 'Hide List'
+                          : 'Show Issued Projectors',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _showProjectorList
+                          ? AppTheme.errorColor
+                          : AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.borderRadius,
+                        ),
+                      ),
+                      elevation: 4,
+                      shadowColor:
+                          (_showProjectorList
+                                  ? AppTheme.errorColor
+                                  : AppTheme.primaryColor)
+                              .withValues(alpha: 0.3),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -1130,12 +1373,12 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _clearProjectorSelection,
-                  icon: const Icon(Icons.clear),
-                  label: const Text('Clear Selection'),
+                  onPressed: _navigateToDetailedReturn,
+                  icon: const Icon(Icons.assignment_return),
+                  label: const Text('Process Return'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.textSecondary,
-                    side: BorderSide(color: AppTheme.textTertiary, width: 1.5),
+                    foregroundColor: AppTheme.primaryColor,
+                    side: BorderSide(color: AppTheme.primaryColor, width: 1.5),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
@@ -1146,6 +1389,25 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _clearProjectorSelection,
+              icon: const Icon(Icons.clear),
+              label: const Text('Clear Selection'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.textSecondary,
+                side: BorderSide(color: AppTheme.textTertiary, width: 1.5),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.borderRadius,
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -1160,34 +1422,151 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
       DateTime.now(),
     );
 
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.receipt_long, color: AppTheme.primaryColor),
-                const SizedBox(width: 8),
-                Text(
-                  'Transaction Details',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.accentColor.withValues(alpha: 0.08),
+            AppTheme.accentColor.withValues(alpha: 0.03),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.accentColor.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.accentColor.withValues(alpha: 0.3),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                child: Icon(
+                  Icons.receipt_long,
+                  color: AppTheme.accentColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Active Transaction',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      'Current issuance details',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.statusIssued.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppTheme.statusIssued.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.pending_actions,
+                      size: 16,
+                      color: AppTheme.statusIssued,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Active',
+                      style: TextStyle(
+                        color: AppTheme.statusIssued,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
 
+          // Transaction Details Cards
+          Row(
+            children: [
+              Expanded(
+                child: _buildTransactionDetailCard(
+                  icon: Icons.person,
+                  title: 'Issued To',
+                  value: _activeTransaction!.lecturerName,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildTransactionDetailCard(
+                  icon: Icons.schedule,
+                  title: 'Issue Date',
+                  value: _formatShortDate(_activeTransaction!.dateIssued),
+                  color: AppTheme.secondaryColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildTransactionDetailCard(
+            icon: Icons.timer,
+            title: 'Duration',
+            value: duration,
+            color: AppTheme.accentColor,
+            isWide: true,
+          ),
+
+          // Purpose if available
+          if (_activeTransaction!.purpose != null &&
+              _activeTransaction!.purpose!.isNotEmpty) ...[
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                color: AppTheme.backgroundColor,
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  color: AppTheme.textTertiary.withValues(alpha: 0.2),
                 ),
               ),
               child: Column(
@@ -1196,161 +1575,368 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
                   Row(
                     children: [
                       Icon(
-                        Icons.person,
-                        color: AppTheme.primaryColor,
-                        size: 20,
+                        Icons.assignment,
+                        color: AppTheme.textSecondary,
+                        size: 18,
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Issued To: ${_activeTransaction!.lecturerName}',
+                        'Purpose',
                         style: TextStyle(
-                          color: AppTheme.primaryColor,
+                          color: AppTheme.textSecondary,
                           fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.schedule,
-                        color: AppTheme.textSecondary,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Issued: ${_formatDate(_activeTransaction!.dateIssued)}',
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.timer,
-                        color: AppTheme.textSecondary,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text('Duration: $duration'),
-                    ],
+                  Text(
+                    _activeTransaction!.purpose!,
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildReturnNotesSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+  /// Helper method to build transaction detail cards
+  Widget _buildTransactionDetailCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+    bool isWide = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: isWide
+          ? Row(
               children: [
-                Icon(Icons.note, color: AppTheme.secondaryColor),
-                const SizedBox(width: 8),
-                Text(
-                  'Return Notes',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        value,
+                        style: TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
-                IconButton(
-                  onPressed: _showSmartSuggestions,
-                  icon: const Icon(Icons.lightbulb_outline),
-                  tooltip: 'Smart Suggestions',
-                  color: AppTheme.primaryColor,
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Form(
-              key: _formKey,
+    );
+  }
+
+  /// Format date for short display
+  String _formatShortDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Widget _buildReturnNotesSection() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.statusAvailable.withValues(alpha: 0.06),
+            AppTheme.statusAvailable.withValues(alpha: 0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.statusAvailable.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.statusAvailable.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.statusAvailable.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Icon(
+                  Icons.note_add,
+                  color: AppTheme.statusAvailable,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Return Notes',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      'Document the projector condition',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: IconButton(
+                  onPressed: _showSmartSuggestions,
+                  icon: Icon(
+                    Icons.lightbulb_outline,
+                    color: AppTheme.primaryColor,
+                  ),
+                  tooltip: 'Smart Suggestions',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Form field
+          Form(
+            key: _formKey,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppTheme.backgroundColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.textTertiary.withValues(alpha: 0.2),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: TextFormField(
                 controller: _returnNotesController,
-                maxLines: 3,
+                maxLines: 4,
                 decoration: InputDecoration(
                   labelText: 'Return Notes *',
-                  hintText: 'Enter any notes about the return...',
-                  prefixIcon: const Icon(Icons.note_add),
-                  filled: true,
-                  fillColor: AppTheme.backgroundColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppConstants.borderRadius,
+                  hintText:
+                      'Enter any notes about the projector condition, accessories returned, or observations...',
+                  hintStyle: TextStyle(
+                    color: AppTheme.textSecondary.withValues(alpha: 0.7),
+                    fontSize: 14,
+                  ),
+                  prefixIcon: Container(
+                    margin: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.statusAvailable.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    borderSide: BorderSide(
-                      color: AppTheme.textTertiary.withValues(alpha: 0.3),
+                    child: Icon(
+                      Icons.edit_note,
+                      color: AppTheme.statusAvailable,
+                      size: 20,
                     ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppConstants.borderRadius,
-                    ),
-                    borderSide: BorderSide(
-                      color: AppTheme.primaryColor,
-                      width: 2,
-                    ),
+                  border: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  focusedErrorBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 16,
+                    bottom: 16,
                   ),
+                  labelStyle: TextStyle(
+                    color: AppTheme.statusAvailable,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  errorStyle: TextStyle(
+                    color: AppTheme.errorColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16,
+                  height: 1.4,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Return notes are required for tracking purposes';
                   }
+                  if (value.trim().length < 10) {
+                    return 'Please provide more detailed notes (minimum 10 characters)';
+                  }
                   return null;
                 },
               ),
             ),
+          ),
 
-            // Smart suggestions chips
-            if (_selectedProjector != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                'Quick Suggestions:',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textSecondary,
-                  fontWeight: FontWeight.w500,
+          // Smart suggestions chips
+          if (_selectedProjector != null) ...[
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Icon(
+                  Icons.tips_and_updates,
+                  color: AppTheme.primaryColor,
+                  size: 18,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _getSmartSuggestions()
-                    .take(4)
-                    .map(
-                      (suggestion) => ActionChip(
-                        label: Text(
-                          suggestion,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        onPressed: () {
-                          if (_returnNotesController.text.isEmpty) {
-                            _returnNotesController.text = suggestion;
-                          } else {
-                            _returnNotesController.text += '; $suggestion';
-                          }
-                        },
-                        backgroundColor: AppTheme.primaryColor.withValues(
-                          alpha: 0.1,
-                        ),
-                        labelStyle: TextStyle(color: AppTheme.primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  'Quick Suggestions:',
+                  style: TextStyle(
+                    color: AppTheme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _getSmartSuggestions()
+                  .take(6)
+                  .map(
+                    (suggestion) => ActionChip(
+                      label: Text(
+                        suggestion,
+                        style: const TextStyle(fontSize: 12),
                       ),
-                    )
-                    .toList(),
-              ),
-            ],
+                      onPressed: () {
+                        if (_returnNotesController.text.isEmpty) {
+                          _returnNotesController.text = suggestion;
+                        } else {
+                          _returnNotesController.text += '; $suggestion';
+                        }
+                      },
+                      backgroundColor: AppTheme.primaryColor.withValues(
+                        alpha: 0.08,
+                      ),
+                      labelStyle: TextStyle(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      side: BorderSide(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                      ),
+                      elevation: 0,
+                      pressElevation: 2,
+                    ),
+                  )
+                  .toList(),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -1413,7 +1999,7 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.errorColor.withOpacity(0.1),
+        color: AppTheme.errorColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppTheme.errorColor),
       ),
@@ -1444,7 +2030,7 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.1),
+        color: Colors.green.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.green),
       ),
@@ -1469,27 +2055,66 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
         _activeTransaction != null &&
         _selectedProjector!.status == AppConstants.statusIssued;
 
-    return ElevatedButton.icon(
-      onPressed: canReturn && !_isLoading ? _navigateToDetailedReturn : null,
-      icon: _isLoading
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: canReturn
+            ? [
+                BoxShadow(
+                  color: AppTheme.secondaryColor.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : [],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: canReturn && !_isLoading
+            ? _navigateToDetailedReturnScreen
+            : null,
+        icon: _isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.assignment_return,
+                  size: 20,
+                  color: Colors.white,
+                ),
               ),
-            )
-          : const Icon(Icons.keyboard_return),
-      label: Text(_isLoading ? 'Processing Return...' : 'Process Return'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: canReturn
-            ? AppTheme.secondaryColor
-            : AppTheme.textTertiary,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+        label: Text(
+          _isLoading ? 'Processing Return...' : 'Process Detailed Return',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: canReturn
+              ? AppTheme.secondaryColor
+              : AppTheme.textTertiary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: canReturn ? 6 : 0,
+          shadowColor: canReturn
+              ? AppTheme.secondaryColor.withValues(alpha: 0.4)
+              : Colors.transparent,
         ),
       ),
     );
@@ -1538,35 +2163,453 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
   Widget _buildScanStatus() {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primaryColor.withValues(alpha: 0.1),
+            AppTheme.primaryColor.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          AnimatedBuilder(
-            animation: _pulseAnimation,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: _pulseAnimation.value,
-                child: Icon(
-                  Icons.camera_alt,
-                  color: AppTheme.primaryColor,
-                  size: 24,
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              _scanStatus!,
-              style: TextStyle(
-                color: AppTheme.primaryColor,
-                fontWeight: FontWeight.w500,
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.3),
               ),
+            ),
+            child: AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _pulseAnimation.value,
+                  child: Icon(
+                    Icons.qr_code_scanner,
+                    color: AppTheme.primaryColor,
+                    size: 24,
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Scanning in Progress',
+                  style: TextStyle(
+                    color: AppTheme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _scanStatus!,
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 14,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 4,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build connection status indicator
+  Widget _buildConnectionStatus() {
+    if (_selectedProjector == null || _activeTransaction == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.accentColor.withValues(alpha: 0.1),
+            AppTheme.accentColor.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.accentColor.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.accentColor.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.accentColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.accentColor.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Icon(Icons.link, color: AppTheme.accentColor, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Screen Connection Status',
+                  style: TextStyle(
+                    color: AppTheme.accentColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Connected to ReturnProjectorScreen for detailed processing',
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 14,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle, size: 16, color: Colors.green),
+                const SizedBox(width: 6),
+                Text(
+                  'Connected',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build projector list for selection
+  Widget _buildProjectorList() {
+    if (_isLoadingProjectors) {
+      return Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.textTertiary.withValues(alpha: 0.2),
+          ),
+        ),
+        child: const Center(
+          child: Column(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading issued projectors...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_issuedProjectors.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.textTertiary.withValues(alpha: 0.2),
+          ),
+        ),
+        child: const Center(
+          child: Column(
+            children: [
+              Icon(Icons.inbox_outlined, size: 48, color: Colors.grey),
+              SizedBox(height: 16),
+              Text('No issued projectors found'),
+              SizedBox(height: 8),
+              Text(
+                'All projectors are currently available',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.list, color: AppTheme.primaryColor, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Issued Projectors',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      '${_filteredProjectors.length} of ${_issuedProjectors.length} projectors',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _showProjectorList = false;
+                  });
+                },
+                icon: Icon(Icons.close, color: AppTheme.textSecondary),
+                tooltip: 'Close List',
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Search Bar
+          TextField(
+            controller: _searchController,
+            onChanged: _filterProjectors,
+            decoration: InputDecoration(
+              hintText: 'Search by serial number, model, or name...',
+              prefixIcon: Icon(Icons.search, color: AppTheme.textSecondary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppTheme.textTertiary.withValues(alpha: 0.3),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppTheme.textTertiary.withValues(alpha: 0.3),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+              ),
+              filled: true,
+              fillColor: AppTheme.backgroundColor,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Projector List
+          Container(
+            constraints: const BoxConstraints(maxHeight: 400),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: _filteredProjectors.length,
+              itemBuilder: (context, index) {
+                final projector = _filteredProjectors[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: InkWell(
+                    onTap: () => _selectProjectorFromList(projector),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.textTertiary.withValues(alpha: 0.2),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withValues(
+                                alpha: 0.1,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.video_camera_front,
+                              color: AppTheme.primaryColor,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  projector.serialNumber,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                if (projector.modelName.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    projector.modelName,
+                                    style: TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                                if (projector.projectorName.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    projector.projectorName,
+                                    style: TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.statusIssued.withValues(
+                                alpha: 0.1,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppTheme.statusIssued.withValues(
+                                  alpha: 0.3,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.arrow_forward,
+                                  size: 16,
+                                  color: AppTheme.statusIssued,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Select',
+                                  style: TextStyle(
+                                    color: AppTheme.statusIssued,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -1576,16 +2619,64 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
 
   /// Build quick return button
   Widget _buildQuickReturnButton() {
-    return OutlinedButton.icon(
-      onPressed: _isLoading ? null : _returnProjector,
-      icon: const Icon(Icons.flash_on),
-      label: const Text('Quick Return'),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppTheme.primaryColor,
-        side: BorderSide(color: AppTheme.primaryColor),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+    final isEnabled =
+        _selectedProjector != null && _activeTransaction != null && !_isLoading;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isEnabled
+              ? AppTheme.primaryColor
+              : AppTheme.textTertiary.withValues(alpha: 0.3),
+          width: 2,
+        ),
+        boxShadow: isEnabled
+            ? [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [],
+      ),
+      child: OutlinedButton.icon(
+        onPressed: isEnabled ? _returnProjector : null,
+        icon: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isEnabled
+                ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                : AppTheme.textTertiary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            Icons.flash_on,
+            size: 20,
+            color: isEnabled ? AppTheme.primaryColor : AppTheme.textTertiary,
+          ),
+        ),
+        label: Text(
+          'Quick Return',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+            color: isEnabled ? AppTheme.primaryColor : AppTheme.textTertiary,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: isEnabled
+              ? AppTheme.primaryColor
+              : AppTheme.textTertiary,
+          side: BorderSide.none,
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          backgroundColor: Colors.transparent,
         ),
       ),
     );

@@ -867,6 +867,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                 borderRadius: BorderRadius.circular(AppConstants.borderRadius),
               ),
               title: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
@@ -881,7 +882,12 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text('Confirm Projector Issue'),
+                  Flexible(
+                    child: Text(
+                      'Confirm Projector Issue',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
               content: Column(
@@ -1190,7 +1196,10 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
           ),
 
           SingleChildScrollView(
-            padding: const EdgeInsets.all(AppConstants.defaultPadding),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.defaultPadding,
+              vertical: AppConstants.defaultPadding * 0.5,
+            ),
             child: FadeTransition(
               opacity: _fadeAnimation,
               child: SlideTransition(
@@ -1198,6 +1207,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                 child: ScaleTransition(
                   scale: _scaleAnimation,
                   child: Container(
+                    constraints: const BoxConstraints(maxWidth: 800),
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceColor,
                       borderRadius: BorderRadius.circular(20),
@@ -1209,7 +1219,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                         ),
                       ],
                     ),
-                    padding: const EdgeInsets.all(AppConstants.largePadding),
+                    padding: const EdgeInsets.all(AppConstants.defaultPadding),
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -1217,23 +1227,23 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                         children: [
                           // Enhanced Header
                           _buildEnhancedHeader(),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 20),
 
                           // Step Indicator
                           _buildStepIndicator(),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 20),
 
                           // Projector Information Section
                           _buildProjectorInfoSection(),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 20),
 
                           // Lecturer Selection Section
                           _buildLecturerSelectionSection(),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 20),
 
                           // Purpose and Notes Section
                           _buildPurposeAndNotesSection(),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 24),
 
                           // Action Buttons
                           _buildActionButtons(),
@@ -1253,10 +1263,20 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
     );
   }
 
+  /// Check if screen is small for responsive layout
+  bool get _isSmallScreen {
+    return MediaQuery.of(context).size.height < 700;
+  }
+
   /// Build step indicator showing progress
   Widget _buildStepIndicator() {
+    // Use more compact layout on smaller screens
+    if (_isSmallScreen) {
+      return _buildCompactStepIndicator();
+    }
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
@@ -1289,63 +1309,71 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              // Step 1: Projector Selection
-              Expanded(
-                child: _buildStepItem(
-                  stepNumber: 1,
-                  title: 'Projector',
-                  subtitle: 'Select projector',
-                  isCompleted: _selectedProjector != null,
-                  isActive: _selectedProjector != null,
-                  icon: Icons.qr_code,
+          const SizedBox(height: 16),
+          // Use horizontal scroll for step indicator on smaller screens
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                // Step 1: Projector Selection
+                SizedBox(
+                  width: 80,
+                  child: _buildStepItem(
+                    stepNumber: 1,
+                    title: 'Projector',
+                    subtitle: 'Select',
+                    isCompleted: _selectedProjector != null,
+                    isActive: _selectedProjector != null,
+                    icon: Icons.qr_code,
+                  ),
                 ),
-              ),
-              _buildStepConnector(_selectedProjector != null),
+                _buildStepConnector(_selectedProjector != null),
 
-              // Step 2: Lecturer Selection
-              Expanded(
-                child: _buildStepItem(
-                  stepNumber: 2,
-                  title: 'Lecturer',
-                  subtitle: 'Choose recipient',
-                  isCompleted: _selectedLecturer != null,
-                  isActive: _selectedLecturer != null,
-                  icon: Icons.person,
+                // Step 2: Lecturer Selection
+                SizedBox(
+                  width: 80,
+                  child: _buildStepItem(
+                    stepNumber: 2,
+                    title: 'Lecturer',
+                    subtitle: 'Choose',
+                    isCompleted: _selectedLecturer != null,
+                    isActive: _selectedLecturer != null,
+                    icon: Icons.person,
+                  ),
                 ),
-              ),
-              _buildStepConnector(_selectedLecturer != null),
+                _buildStepConnector(_selectedLecturer != null),
 
-              // Step 3: Purpose & Notes
-              Expanded(
-                child: _buildStepItem(
-                  stepNumber: 3,
-                  title: 'Details',
-                  subtitle: 'Purpose & notes',
-                  isCompleted: _purposeController.text.trim().isNotEmpty,
-                  isActive: _purposeController.text.trim().isNotEmpty,
-                  icon: Icons.assignment,
+                // Step 3: Purpose & Notes
+                SizedBox(
+                  width: 80,
+                  child: _buildStepItem(
+                    stepNumber: 3,
+                    title: 'Details',
+                    subtitle: 'Purpose',
+                    isCompleted: _purposeController.text.trim().isNotEmpty,
+                    isActive: _purposeController.text.trim().isNotEmpty,
+                    icon: Icons.assignment,
+                  ),
                 ),
-              ),
-              _buildStepConnector(_purposeController.text.trim().isNotEmpty),
+                _buildStepConnector(_purposeController.text.trim().isNotEmpty),
 
-              // Step 4: Confirmation
-              Expanded(
-                child: _buildStepItem(
-                  stepNumber: 4,
-                  title: 'Confirm',
-                  subtitle: 'Review & issue',
-                  isCompleted: false,
-                  isActive:
-                      _selectedProjector != null &&
-                      _selectedLecturer != null &&
-                      _purposeController.text.trim().isNotEmpty,
-                  icon: Icons.check_circle,
+                // Step 4: Confirmation
+                SizedBox(
+                  width: 80,
+                  child: _buildStepItem(
+                    stepNumber: 4,
+                    title: 'Confirm',
+                    subtitle: 'Review',
+                    isCompleted: false,
+                    isActive:
+                        _selectedProjector != null &&
+                        _selectedLecturer != null &&
+                        _purposeController.text.trim().isNotEmpty,
+                    icon: Icons.check_circle,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -1368,21 +1396,21 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
     return Column(
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             color: isCompleted
                 ? AppTheme.primaryColor
                 : isActive
                 ? AppTheme.primaryColor.withValues(alpha: 0.1)
                 : AppTheme.textTertiary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: color, width: isActive ? 2 : 1),
           ),
           child: Center(
             child: isCompleted
-                ? Icon(Icons.check, color: Colors.white, size: 20)
-                : Icon(icon, color: color, size: 20),
+                ? Icon(Icons.check, color: Colors.white, size: 18)
+                : Icon(icon, color: color, size: 18),
           ),
         ),
         const SizedBox(height: 8),
@@ -1391,29 +1419,106 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
           style: TextStyle(
             color: color,
             fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-            fontSize: 12,
+            fontSize: 11,
           ),
           textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         Text(
           subtitle,
           style: TextStyle(
             color: color.withValues(alpha: 0.7),
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: FontWeight.w400,
           ),
           textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
+    );
+  }
+
+  /// Build compact step indicator for small screens
+  Widget _buildCompactStepIndicator() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Progress',
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+          Row(
+            children: [
+              _buildCompactStepDot(
+                _selectedProjector != null,
+                AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 8),
+              _buildCompactStepDot(
+                _selectedLecturer != null,
+                AppTheme.accentColor,
+              ),
+              const SizedBox(width: 8),
+              _buildCompactStepDot(
+                _purposeController.text.trim().isNotEmpty,
+                AppTheme.secondaryColor,
+              ),
+              const SizedBox(width: 8),
+              _buildCompactStepDot(
+                _selectedProjector != null &&
+                    _selectedLecturer != null &&
+                    _purposeController.text.trim().isNotEmpty,
+                AppTheme.primaryColor,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build compact step dot
+  Widget _buildCompactStepDot(bool isCompleted, Color color) {
+    return Container(
+      width: 12,
+      height: 12,
+      decoration: BoxDecoration(
+        color: isCompleted ? color : color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color, width: isCompleted ? 0 : 1),
+      ),
     );
   }
 
   /// Build step connector
   Widget _buildStepConnector(bool isCompleted) {
     return Container(
-      width: 20,
+      width: 16,
       height: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
         color: isCompleted
             ? AppTheme.primaryColor
@@ -2601,6 +2706,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
               ),
               const SizedBox(height: 12),
               Container(
+                width: double.infinity,
                 decoration: BoxDecoration(
                   color: AppTheme.backgroundColor,
                   borderRadius: BorderRadius.circular(12),
@@ -2670,6 +2776,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
               ),
               const SizedBox(height: 12),
               Container(
+                width: double.infinity,
                 decoration: BoxDecoration(
                   color: AppTheme.backgroundColor,
                   borderRadius: BorderRadius.circular(12),
@@ -2932,6 +3039,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                           )
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 _selectedLecturer != null
@@ -2940,13 +3048,17 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                _selectedLecturer != null
-                                    ? 'Issue to ${_selectedLecturer!.name}'
-                                    : 'Select Lecturer First',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                              Flexible(
+                                child: Text(
+                                  _selectedLecturer != null
+                                      ? 'Issue to ${_selectedLecturer!.name.split(' ').first}'
+                                      : 'Select Lecturer',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ],
