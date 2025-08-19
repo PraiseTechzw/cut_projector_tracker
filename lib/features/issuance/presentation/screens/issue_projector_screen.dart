@@ -2461,12 +2461,15 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                         size: 16,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Scan: Use the camera to scan QR codes or barcodes',
-                        style: TextStyle(
-                          color: AppTheme.primaryColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          'Scan: Use the camera to scan QR codes or barcodes',
+                          style: TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
