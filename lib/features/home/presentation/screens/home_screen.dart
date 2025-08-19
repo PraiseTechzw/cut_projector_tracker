@@ -882,47 +882,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               fontSize: 18,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           if (details.isNotEmpty)
             Flexible(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: details
-                    .take(1)
-                    .map(
-                      (detail) => Padding(
-                        padding: const EdgeInsets.only(bottom: 1),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 2,
-                              height: 2,
-                              margin: const EdgeInsets.only(top: 4),
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.6),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 3),
-                            Expanded(
-                              child: Text(
-                                detail,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: AppTheme.textTertiary,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 9,
-                                    ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                          ],
-                        ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 2,
+                    height: 2,
+                    margin: const EdgeInsets.only(top: 3),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.6),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text(
+                      details.first,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textTertiary,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 8,
                       ),
-                    )
-                    .toList(),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
