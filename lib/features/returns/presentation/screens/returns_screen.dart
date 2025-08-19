@@ -92,10 +92,9 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-    _pulseAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.2,
-    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
     _fadeController.forward();
     _slideController.forward();
@@ -129,17 +128,17 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
         '/scan-projector',
         extra: {'purpose': 'return'},
       );
-      
+
       if (result != null && result is Projector) {
         setState(() {
           _selectedProjector = result;
           _activeTransaction = null;
           _scanStatus = 'Projector found! Looking up transaction...';
         });
-        
+
         // Intelligent transaction lookup with better error handling
         await _lookupActiveTransaction();
-        
+
         setState(() {
           _scanStatus = null;
         });
@@ -165,38 +164,42 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
     if (projector.status != AppConstants.statusIssued) {
       return false;
     }
-    
+
     // Check if projector has been issued for too long (e.g., more than 30 days)
     if (_activeTransaction != null) {
-      final daysIssued = DateTime.now().difference(_activeTransaction!.dateIssued).inDays;
+      final daysIssued = DateTime.now()
+          .difference(_activeTransaction!.dateIssued)
+          .inDays;
       if (daysIssued > 30) {
         return false;
       }
     }
-    
+
     return true;
   }
 
   /// Get intelligent return note suggestions based on projector condition
   List<String> _getSmartSuggestions() {
     if (_selectedProjector == null) return _returnNoteSuggestions;
-    
+
     // Filter suggestions based on projector status and transaction duration
     List<String> suggestions = [..._returnNoteSuggestions];
-    
+
     if (_activeTransaction != null) {
-      final daysIssued = DateTime.now().difference(_activeTransaction!.dateIssued).inDays;
-      
+      final daysIssued = DateTime.now()
+          .difference(_activeTransaction!.dateIssued)
+          .inDays;
+
       if (daysIssued > 7) {
         suggestions.add('Extended use period - check for wear');
         suggestions.add('May need maintenance after long use');
       }
-      
+
       if (daysIssued > 14) {
         suggestions.add('Long-term usage - thorough inspection needed');
       }
     }
-    
+
     return suggestions;
   }
 
