@@ -22,6 +22,7 @@ import 'features/lecturers/presentation/screens/lecturers_screen.dart';
 import 'shared/models/projector.dart';
 import 'shared/models/lecturer.dart';
 import 'features/issuance/presentation/screens/issue_projector_screen.dart';
+import 'features/history/presentation/screens/history_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -142,6 +143,11 @@ final _router = GoRouter(
       path: '/lecturers',
       builder: (context, state) =>
           const AuthGuard(requireAuth: true, child: LecturersScreen()),
+    ),
+    GoRoute(
+      path: '/history',
+      builder: (context, state) =>
+          const AuthGuard(requireAuth: true, child: HistoryScreen()),
     ),
 
     // Protected routes (auth required)

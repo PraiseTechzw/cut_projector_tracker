@@ -941,8 +941,8 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
     if (_hasUnsavedChanges()) {
       _showDiscardChangesDialog();
     } else {
-      // Navigate back to assets screen instead of popping
-      context.go('/assets');
+      // Navigate back to home screen (where user can access assets tab)
+      context.go('/issue-projector');
     }
   }
 
@@ -1013,7 +1013,7 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop(); // Close the dialog
-              context.go('/assets'); // Navigate back to assets screen
+              context.go('/home'); // Navigate back to home screen
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.errorColor,
@@ -1083,8 +1083,8 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
           ),
         );
 
-        // Navigate back to assets screen with success result
-        context.go('/assets');
+        // Navigate back to home screen with success result
+        context.go('/home');
       }
     } catch (e) {
       if (mounted) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firestore_service.dart';
@@ -650,7 +651,8 @@ class _EditProjectorScreenState extends ConsumerState<EditProjectorScreen> {
     if (_hasChanges) {
       _showDiscardChangesDialog();
     } else {
-      Navigator.of(context).pop();
+      // Navigate back to home screen (where user can access assets tab)
+      context.go('/home');
     }
   }
 
@@ -670,8 +672,8 @@ class _EditProjectorScreenState extends ConsumerState<EditProjectorScreen> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Close the dialog
+              context.go('/home'); // Navigate back to home screen
             },
             child: const Text('Discard'),
           ),
@@ -727,8 +729,8 @@ class _EditProjectorScreenState extends ConsumerState<EditProjectorScreen> {
           ),
         );
 
-        // Navigate back
-        Navigator.of(context).pop();
+        // Navigate back to home screen
+        context.go('/home');
       }
     } catch (e) {
       if (mounted) {
