@@ -136,17 +136,63 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
 
   Widget _buildSearchAndFilterBar() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(AppConstants.defaultPadding),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
-        border: Border(
-          bottom: BorderSide(color: AppTheme.textTertiary.withOpacity(0.2)),
-        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          // Search bar
-          TextField(
+          // Enhanced Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.inventory,
+                  color: AppTheme.primaryColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Asset Management',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'Search and filter projectors in the system',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Enhanced Search bar
+          TextFormField(
             onChanged: (value) {
               setState(() {
                 _searchQuery = value;
@@ -154,7 +200,7 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
             },
             decoration: InputDecoration(
               labelText: 'Search Projectors',
-              hintText: 'Search by serial number or last issued to...',
+              hintText: 'Search by serial number, model, or last issued to...',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
@@ -166,37 +212,80 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
                       },
                     )
                   : null,
-              border: const OutlineInputBorder(),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: AppTheme.backgroundColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                borderSide: BorderSide(
+                  color: AppTheme.textTertiary.withValues(alpha: 0.3),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                borderSide: BorderSide(
+                  color: AppTheme.textTertiary.withValues(alpha: 0.3),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // Filter chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: _statusOptions.map((status) {
-                final isSelected = _statusFilter == status;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(status),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        _statusFilter = selected ? status : 'All';
-                      });
-                    },
-                    backgroundColor: Colors.white,
-                    selectedColor: AppTheme.primaryColor.withOpacity(0.2),
-                    checkmarkColor: AppTheme.primaryColor,
-                  ),
-                );
-              }).toList(),
-            ),
+          // Enhanced Filter chips
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Filter by Status:',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: _statusOptions.map((status) {
+                    final isSelected = _statusFilter == status;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(status),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          setState(() {
+                            _statusFilter = selected ? status : 'All';
+                          });
+                        },
+                        backgroundColor: Colors.white,
+                        selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                        checkmarkColor: AppTheme.primaryColor,
+                        side: BorderSide(
+                          color: isSelected
+                              ? AppTheme.primaryColor
+                              : AppTheme.textTertiary.withValues(alpha: 0.3),
+                        ),
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? AppTheme.primaryColor
+                              : AppTheme.textSecondary,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
           ),
         ],
       ),
