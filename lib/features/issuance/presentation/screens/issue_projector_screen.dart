@@ -801,6 +801,190 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
     );
   }
 
+  /// Build available projectors list
+  Widget _buildAvailableProjectorsList(StateSetter setState) {
+    return FutureBuilder<List<Projector>>(
+      future: _getAvailableProjectors(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.all(16),
+            child: const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppTheme.primaryColor,
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final availableProjectors = snapshot.data!;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.inventory_2,
+                    color: AppTheme.primaryColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Available Projectors (${availableProjectors.length})',
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 200),
+                decoration: BoxDecoration(
+                  color: AppTheme.backgroundColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: availableProjectors.length,
+                  itemBuilder: (context, index) {
+                    final projector = availableProjectors[index];
+                    return _buildAvailableProjectorItem(projector, setState);
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Build individual available projector item
+  Widget _buildAvailableProjectorItem(
+    Projector projector,
+    StateSetter setState,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).pop();
+          setState(() {
+            _selectedProjector = projector;
+          });
+          _validateProjectorStatus();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Projector ${projector.serialNumber} selected!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.qr_code,
+                  color: AppTheme.primaryColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      projector.serialNumber,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryColor,
+                        fontFamily: 'monospace',
+                        fontSize: 14,
+                      ),
+                    ),
+                    if (projector.modelName.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        projector.modelName,
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Tap to select',
+                  style: TextStyle(
+                    color: AppTheme.primaryColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Get available projectors from database
+  Future<List<Projector>> _getAvailableProjectors() async {
+    try {
+      final firestoreService = ref.read(firestoreServiceProvider);
+      final projectorsStream = firestoreService.getProjectors();
+      final allProjectors = await projectorsStream.first;
+
+      return allProjectors
+          .where((p) => p.status == AppConstants.statusAvailable)
+          .take(10) // Limit to 10 for performance
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
   /// Build helpful tip section
   Widget _buildHelpfulTip() {
     return Container(
