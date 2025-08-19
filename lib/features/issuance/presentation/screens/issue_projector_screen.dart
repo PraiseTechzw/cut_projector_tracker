@@ -2480,12 +2480,15 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                         size: 16,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Manual: Type the serial number directly',
-                        style: TextStyle(
-                          color: AppTheme.accentColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          'Manual: Type the serial number directly',
+                          style: TextStyle(
+                            color: AppTheme.accentColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
