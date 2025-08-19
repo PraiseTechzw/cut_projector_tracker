@@ -204,59 +204,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Welcome Header
-                        FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: SlideTransition(
-                            position: _slideAnimation,
-                            child: _buildEnhancedWelcomeHeader(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: MediaQuery.of(context).size.height - 100,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Welcome Header
+                          FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: SlideTransition(
+                              position: _slideAnimation,
+                              child: _buildEnhancedWelcomeHeader(),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                        // System Statistics
-                        FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: SlideTransition(
-                            position: _slideAnimation,
-                            child: _buildEnhancedSystemStats(),
+                          // System Statistics
+                          FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: SlideTransition(
+                              position: _slideAnimation,
+                              child: _buildEnhancedSystemStats(),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                        // Quick Actions
-                        FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: SlideTransition(
-                            position: _slideAnimation,
-                            child: _buildEnhancedQuickActions(),
+                          // Quick Actions
+                          FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: SlideTransition(
+                              position: _slideAnimation,
+                              child: _buildEnhancedQuickActions(),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                        // Recent Activity
-                        FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: SlideTransition(
-                            position: _slideAnimation,
-                            child: _buildEnhancedRecentActivity(),
+                          // Recent Activity
+                          FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: SlideTransition(
+                              position: _slideAnimation,
+                              child: _buildEnhancedRecentActivity(),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                        // Quick Stats Cards
-                        FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: SlideTransition(
-                            position: _slideAnimation,
-                            child: _buildEnhancedQuickStatsCards(),
+                          // Quick Stats Cards
+                          FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: SlideTransition(
+                              position: _slideAnimation,
+                              child: _buildEnhancedQuickStatsCards(),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
+                          const SizedBox(height: 32),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -475,7 +481,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             crossAxisCount: 2,
             crossAxisSpacing: 20,
             mainAxisSpacing: 20,
-            childAspectRatio: 1.1,
+            childAspectRatio: 1.4,
             children: [
               _buildEnhancedStatCard(
                 'Total Projectors',
@@ -821,7 +827,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     List<String> details,
   ) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.backgroundColor,
         borderRadius: BorderRadius.circular(20),
@@ -837,20 +843,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: color.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
-                child: Icon(icon, color: color, size: 22),
+                child: Icon(icon, color: color, size: 18),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -860,51 +867,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     color: AppTheme.textSecondary,
                     fontWeight: FontWeight.w600,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
           Text(
             value,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: color,
               fontWeight: FontWeight.bold,
-              fontSize: 28,
+              fontSize: 18,
             ),
           ),
-          const SizedBox(height: 12),
-          ...details.map(
-            (detail) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    margin: const EdgeInsets.only(top: 6),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.6),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      detail,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textTertiary,
-                        fontWeight: FontWeight.w500,
+          const SizedBox(height: 4),
+          if (details.isNotEmpty)
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: details
+                    .take(1)
+                    .map(
+                      (detail) => Padding(
+                        padding: const EdgeInsets.only(bottom: 1),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 2,
+                              height: 2,
+                              margin: const EdgeInsets.only(top: 4),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.6),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                detail,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: AppTheme.textTertiary,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 9,
+                                    ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                    ),
-                  ),
-                ],
+                    )
+                    .toList(),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -918,7 +938,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     VoidCallback onPressed,
   ) {
     return Container(
-      height: 100,
+      constraints: const BoxConstraints(minHeight: 90, maxHeight: 110),
       decoration: BoxDecoration(
         color: AppTheme.backgroundColor,
         borderRadius: BorderRadius.circular(20),
@@ -938,12 +958,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           onTap: onPressed,
           borderRadius: BorderRadius.circular(20),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
@@ -952,17 +973,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       width: 1,
                     ),
                   ),
-                  child: Icon(icon, color: color, size: 32),
+                  child: Icon(icon, color: color, size: 28),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                const SizedBox(height: 8),
+                Flexible(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                   ),
-                  textAlign: TextAlign.center,
                 ),
               ],
             ),
