@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firestore_service.dart';
@@ -102,20 +103,58 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
           foregroundColor: Colors.white,
           elevation: 0,
           leading: IconButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => _handleBackNavigation(),
             icon: const Icon(Icons.arrow_back),
+          ),
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.primaryColor,
+                  AppTheme.primaryColor.withValues(alpha: 0.8),
+                ],
+              ),
+            ),
           ),
           bottom: TabBar(
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
             indicatorColor: Colors.white,
+            indicatorWeight: 3,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+            ),
             tabs: const [
               Tab(icon: Icon(Icons.edit_note), text: 'Manual Entry'),
               Tab(icon: Icon(Icons.qr_code_scanner), text: 'Scan Barcode'),
             ],
           ),
         ),
-        body: TabBarView(children: [_buildManualEntryForm(), _buildScanForm()]),
+        body: Stack(
+          children: [
+            // Background gradient
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.primaryColor.withValues(alpha: 0.05),
+                    AppTheme.backgroundColor,
+                  ],
+                ),
+              ),
+            ),
+            TabBarView(children: [_buildManualEntryForm(), _buildScanForm()]),
+          ],
+        ),
       ),
     );
   }
@@ -268,9 +307,7 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () => Navigator.of(context).pop(),
+                      onPressed: _isLoading ? null : _handleBackNavigation,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.primaryColor,
                         side: BorderSide(
@@ -298,7 +335,7 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _submitForm,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accentColor,
+                        backgroundColor: AppTheme.primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -319,9 +356,11 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
                                 ),
                               ),
                             )
-                          : const Text(
-                              'Add Projector',
-                              style: TextStyle(
+                          : Text(
+                              widget.isEditing
+                                  ? 'Update Projector'
+                                  : 'Add Projector',
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -683,6 +722,12 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppTheme.primaryColor,
                                     foregroundColor: Colors.white,
+                                    elevation: 4,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AppConstants.borderRadius,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -761,7 +806,7 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _isScanning
                                     ? AppTheme.errorColor
-                                    : AppTheme.accentColor,
+                                    : AppTheme.primaryColor,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 24,
@@ -772,6 +817,7 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
                                     AppConstants.borderRadius,
                                   ),
                                 ),
+                                elevation: 4,
                               ),
                             ),
                           ],
@@ -890,6 +936,96 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
     });
   }
 
+  /// Handle back navigation
+  void _handleBackNavigation() {
+    if (_hasUnsavedChanges()) {
+      _showDiscardChangesDialog();
+    } else {
+      // Navigate back to assets screen instead of popping
+      context.go('/assets');
+    }
+  }
+
+  /// Check if there are unsaved changes
+  bool _hasUnsavedChanges() {
+    return _serialNumberController.text.isNotEmpty ||
+        _modelNameController.text.isNotEmpty ||
+        _projectorNameController.text.isNotEmpty ||
+        _locationController.text.isNotEmpty ||
+        _notesController.text.isNotEmpty ||
+        _selectedStatus != AppConstants.statusAvailable;
+  }
+
+  /// Show discard changes dialog
+  void _showDiscardChangesDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.errorColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.warning_amber,
+                color: AppTheme.errorColor,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text('Discard Changes?'),
+          ],
+        ),
+        content: Container(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You have unsaved changes in the form.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Are you sure you want to discard them? This action cannot be undone.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.textSecondary,
+            ),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+              context.go('/assets'); // Navigate back to assets screen
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Submit the form to add the projector
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
@@ -947,8 +1083,8 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
           ),
         );
 
-        // Navigate back with success result
-        Navigator.of(context).pop(true);
+        // Navigate back to assets screen with success result
+        context.go('/assets');
       }
     } catch (e) {
       if (mounted) {
