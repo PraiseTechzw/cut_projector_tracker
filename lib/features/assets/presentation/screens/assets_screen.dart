@@ -182,7 +182,9 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
               // Projectors table
               Expanded(
                 child: projectorsStream.when(
-                  data: (projectors) => _buildProjectorsTable(projectors),
+                  data: (projectors) => SingleChildScrollView(
+                    child: _buildProjectorsTable(projectors),
+                  ),
                   loading: () => const Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(
@@ -577,6 +579,9 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
 
         // Pagination Controls
         if (_totalPages > 1) _buildPaginationControls(),
+
+        // Bottom padding to ensure content doesn't get cut off
+        const SizedBox(height: 40),
       ],
     );
   }
@@ -888,9 +893,14 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
 
   /// Build pagination controls
   Widget _buildPaginationControls() {
+    // Use compact layout for small screens
+    if (_isSmallScreen) {
+      return _buildCompactPaginationControls();
+    }
+
     return Container(
       margin: const EdgeInsets.all(AppConstants.defaultPadding),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(20),
@@ -907,20 +917,84 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
           width: 1,
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
         children: [
-          // Page info
-          Text(
-            'Page $_currentPage of $_totalPages',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
+          // Top row with page info and items per page
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Page info
+              Text(
+                'Page $_currentPage of $_totalPages',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+
+              // Items per page selector
+              Row(
+                children: [
+                  Text(
+                    'Items per page:',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: DropdownButton<int>(
+                      value: _itemsPerPage,
+                      underline: const SizedBox.shrink(),
+                      items: [10, 15, 25, 50].map((count) {
+                        return DropdownMenuItem(
+                          value: count,
+                          child: Text(
+                            count.toString(),
+                            style: TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _itemsPerPage = value;
+                            _currentPage = 1;
+                            _totalPages =
+                                (_filteredProjectors.length / _itemsPerPage)
+                                    .ceil();
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
 
-          // Pagination buttons
+          const SizedBox(height: 12),
+
+          // Pagination buttons - centered
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Previous page
               IconButton(
@@ -960,8 +1034,9 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
                   pageNumber = _currentPage - 3 + index;
                 }
 
-                if (pageNumber < 1 || pageNumber > _totalPages)
+                if (pageNumber < 1 || pageNumber > _totalPages) {
                   return const SizedBox.shrink();
+                }
 
                 final isCurrentPage = pageNumber == _currentPage;
                 return Container(
@@ -1033,24 +1108,145 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
 
-          // Items per page selector
+  /// Build compact pagination controls for small screens
+  Widget _buildCompactPaginationControls() {
+    return Container(
+      margin: const EdgeInsets.all(AppConstants.defaultPadding),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+            spreadRadius: 1,
+          ),
+        ],
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          // Compact page info
+          Text(
+            'Page $_currentPage of $_totalPages',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 12),
+
+          // Compact pagination buttons
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Previous page
+              IconButton(
+                onPressed: _currentPage > 1
+                    ? () {
+                        setState(() {
+                          _currentPage--;
+                        });
+                      }
+                    : null,
+                icon: Icon(
+                  Icons.chevron_left,
+                  color: _currentPage > 1
+                      ? AppTheme.primaryColor
+                      : AppTheme.textTertiary,
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor: _currentPage > 1
+                      ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                      : AppTheme.textTertiary.withValues(alpha: 0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
+
+              // Current page indicator
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _currentPage.toString(),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+
+              // Next page
+              IconButton(
+                onPressed: _currentPage < _totalPages
+                    ? () {
+                        setState(() {
+                          _currentPage++;
+                        });
+                      }
+                    : null,
+                icon: Icon(
+                  Icons.chevron_right,
+                  color: _currentPage < _totalPages
+                      ? AppTheme.primaryColor
+                      : AppTheme.textTertiary,
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor: _currentPage < _totalPages
+                      ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                      : AppTheme.textTertiary.withValues(alpha: 0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Compact items per page selector
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Items per page:',
+                'Items:',
                 style: TextStyle(
                   color: AppTheme.textSecondary,
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: AppTheme.primaryColor.withValues(alpha: 0.3),
                     width: 1,
@@ -1065,8 +1261,9 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
                       child: Text(
                         count.toString(),
                         style: TextStyle(
-                          color: AppTheme.primaryColor,
+                          color: AppTheme.textPrimary,
                           fontWeight: FontWeight.w600,
+                          fontSize: 13,
                         ),
                       ),
                     );
@@ -1088,6 +1285,11 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
         ],
       ),
     );
+  }
+
+  /// Check if screen is small for responsive layout
+  bool get _isSmallScreen {
+    return MediaQuery.of(context).size.width < 600;
   }
 
   DataColumn _buildSortableColumn(String label, String sortKey) {
