@@ -1,11 +1,11 @@
 {
-    "name": "cut_projector_tracker",
-    "short_name": "cut_projector_tracker",
+    "name": "CUT Projector Tracker",
+    "short_name": "CUT Projector Tracker",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "CUT Projector Tracker - A mobile app for tracking projector issuance and returns using barcode scanning.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

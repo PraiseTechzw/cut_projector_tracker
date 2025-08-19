@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "cut_projector_tracker" "\0"
+            VALUE "FileDescription", "CUT Projector Tracker" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "cut_projector_tracker" "\0"
+            VALUE "InternalName", "CUT Projector Tracker" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "cut_projector_tracker.exe" "\0"
-            VALUE "ProductName", "cut_projector_tracker" "\0"
+            VALUE "OriginalFilename", "CUT Projector Tracker.exe" "\0"
+            VALUE "ProductName", "CUT Projector Tracker" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
