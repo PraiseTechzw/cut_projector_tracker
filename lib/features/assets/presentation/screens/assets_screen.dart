@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../shared/models/projector.dart';
@@ -34,9 +35,9 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: const Text('Asset Register'),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
-        foregroundColor: AppTheme.textPrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
@@ -44,48 +45,78 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
             tooltip: 'Filter & Sort',
           ),
         ],
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppTheme.primaryColor,
+                AppTheme.primaryColor.withValues(alpha: 0.8),
+              ],
+            ),
+          ),
+        ),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // Search and filter bar
-          _buildSearchAndFilterBar(),
+          // Background gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppTheme.primaryColor.withValues(alpha: 0.05),
+                  AppTheme.backgroundColor,
+                ],
+              ),
+            ),
+          ),
 
-          // Projectors table
-          Expanded(
-            child: projectorsStream.when(
-              data: (projectors) => _buildProjectorsTable(projectors),
-              loading: () => const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppTheme.primaryColor,
+          Column(
+            children: [
+              // Search and filter bar
+              _buildSearchAndFilterBar(),
+
+              // Projectors table
+              Expanded(
+                child: projectorsStream.when(
+                  data: (projectors) => _buildProjectorsTable(projectors),
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppTheme.primaryColor,
+                      ),
+                    ),
+                  ),
+                  error: (error, stack) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: AppTheme.errorColor,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error loading projectors',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(color: AppTheme.errorColor),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          error.toString(),
+                          style: TextStyle(color: AppTheme.textSecondary),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: AppTheme.errorColor,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error loading projectors',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(color: AppTheme.errorColor),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      error.toString(),
-                      style: TextStyle(color: AppTheme.textSecondary),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            ],
           ),
         ],
       ),
@@ -95,6 +126,10 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
         label: const Text('Add Projector'),
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
+        elevation: 6,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+        ),
       ),
     );
   }
