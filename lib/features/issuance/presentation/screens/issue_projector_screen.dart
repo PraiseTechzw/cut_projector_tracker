@@ -269,163 +269,680 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
   /// Show manual projector entry bottom sheet
   void _showManualProjectorEntry() {
     final manualEntryController = TextEditingController();
+    List<Projector> searchResults = [];
+    bool isSearching = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.8,
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, -8),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildManualEntryHeader(),
+                _buildAvailableProjectorsList(setState),
+                _buildSearchInput(
+                  manualEntryController,
+                  setState,
+                  searchResults,
+                  isSearching,
+                ),
+                _buildSearchResults(
+                  searchResults,
+                  isSearching,
+                  manualEntryController,
+                  setState,
+                ),
+                _buildHelpfulTip(),
+                _buildModalActionButtons(
+                  manualEntryController,
+                  setState,
+                  searchResults,
+                  isSearching,
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Build the header section for manual entry
+  Widget _buildManualEntryHeader() {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      child: Column(
+        children: [
+          Container(
+            width: 50,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppTheme.textTertiary.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.primaryColor,
+                        AppTheme.primaryColor.withValues(alpha: 0.8),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.keyboard,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Manual Projector Entry',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Search and select projectors from database',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(Icons.close, color: AppTheme.textSecondary),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppTheme.backgroundColor,
+                    shape: const CircleBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build the search input field
+  Widget _buildSearchInput(
+    TextEditingController controller,
+    StateSetter setState,
+    List<Projector> searchResults,
+    bool isSearching,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Search Projectors',
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Search by serial number, model, or name',
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: TextFormField(
+              controller: controller,
+              decoration: InputDecoration(
+                labelText: 'Search Projectors',
+                hintText: 'Enter serial number, model, or name...',
+                prefixIcon: Container(
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(
+                    Icons.search,
+                    color: AppTheme.primaryColor,
+                    size: 24,
+                  ),
+                ),
+                suffixIcon: controller.text.isNotEmpty
+                    ? Container(
+                        margin: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            color: AppTheme.errorColor,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            controller.clear();
+                            setState(() {
+                              searchResults.clear();
+                              isSearching = false;
+                            });
+                          },
+                        ),
+                      )
+                    : null,
+                filled: true,
+                fillColor: AppTheme.backgroundColor,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                    width: 1.5,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: AppTheme.primaryColor,
+                    width: 2.5,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 18,
+                ),
+                labelStyle: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+                hintStyle: TextStyle(
+                  color: AppTheme.textTertiary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              textCapitalization: TextCapitalization.characters,
+              onChanged: (value) {
+                setState(() {
+                  if (value.trim().isEmpty) {
+                    searchResults.clear();
+                    isSearching = false;
+                  } else {
+                    _searchProjectorsInDatabase(
+                      value,
+                      setState,
+                      searchResults,
+                      isSearching,
+                    );
+                  }
+                });
+              },
+              onFieldSubmitted: (value) {
+                if (value.trim().isNotEmpty) {
+                  _searchProjectorsInDatabase(
+                    value,
+                    setState,
+                    searchResults,
+                    isSearching,
+                  );
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build the search results section
+  Widget _buildSearchResults(
+    List<Projector> searchResults,
+    bool isSearching,
+    TextEditingController controller,
+    StateSetter setState,
+  ) {
+    if (searchResults.isNotEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.search, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Search Results (${searchResults.length})',
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 300),
+              decoration: BoxDecoration(
+                color: AppTheme.backgroundColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                ),
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: searchResults.length,
+                itemBuilder: (context, index) {
+                  final projector = searchResults[index];
+                  return _buildProjectorResultItem(projector, setState);
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (isSearching) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.all(24),
+        child: const Center(
+          child: Column(
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppTheme.primaryColor,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Searching projectors...',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+              ),
+            ],
           ),
         ),
-        child: Column(
+      );
+    } else if (controller.text.trim().isNotEmpty && searchResults.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppTheme.textTertiary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.textTertiary.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Row(
           children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+            Icon(Icons.search_off, color: AppTheme.textSecondary, size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'No projectors found',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'No projectors found matching "${controller.text.trim()}". Try a different search term.',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
             ),
+          ],
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
 
-            // Header
-            Container(
-              padding: const EdgeInsets.all(24),
-              child: Row(
+  /// Build individual projector result item
+  Widget _buildProjectorResultItem(Projector projector, StateSetter setState) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).pop();
+          setState(() {
+            _selectedProjector = projector;
+          });
+          _validateProjectorStatus();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Projector ${projector.serialNumber} selected!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.qr_code,
+                  color: AppTheme.primaryColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      projector.serialNumber,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryColor,
+                        fontFamily: 'monospace',
+                        fontSize: 16,
+                      ),
+                    ),
+                    if (projector.modelName.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        projector.modelName,
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    if (projector.projectorName.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        projector.projectorName,
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      color: _getStatusColor(
+                        projector.status,
+                      ).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _getStatusColor(
+                          projector.status,
+                        ).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      projector.status,
+                      style: TextStyle(
+                        color: _getStatusColor(projector.status),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      Icons.keyboard,
-                      color: AppTheme.primaryColor,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Manual Projector Entry',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(
-                                color: AppTheme.textPrimary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        Text(
-                          'Enter projector serial number manually',
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Tap to select',
+                      style: TextStyle(
+                        color: AppTheme.accentColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-
-            // Input field
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: TextField(
-                controller: manualEntryController,
-                decoration: InputDecoration(
-                  labelText: 'Projector Serial Number',
-                  hintText: 'Enter the projector serial number...',
-                  prefixIcon: const Icon(Icons.qr_code),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: AppTheme.textTertiary.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: AppTheme.textTertiary.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: AppTheme.primaryColor,
-                      width: 2,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: AppTheme.backgroundColor,
-                ),
-                textCapitalization: TextCapitalization.characters,
-                onSubmitted: (value) => _searchProjectorBySerial(value),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Action buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.textSecondary,
-                        side: BorderSide(
-                          color: AppTheme.textTertiary,
-                          width: 1.5,
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () =>
-                          _searchProjectorBySerial(manualEntryController.text),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 4,
-                      ),
-                      child: const Text('Search Projector'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  /// Build helpful tip section
+  Widget _buildHelpfulTip() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lightbulb_outline, color: AppTheme.primaryColor, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Tip: Search by serial number, model name, or projector name. Results update as you type.',
+              style: TextStyle(
+                color: AppTheme.primaryColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build modal action buttons
+  Widget _buildModalActionButtons(
+    TextEditingController controller,
+    StateSetter setState,
+    List<Projector> searchResults,
+    bool isSearching,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.textSecondary,
+                side: BorderSide(color: AppTheme.textTertiary, width: 1.5),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Cancel'),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                if (controller.text.trim().isNotEmpty) {
+                  _searchProjectorsInDatabase(
+                    controller.text.trim(),
+                    setState,
+                    searchResults,
+                    isSearching,
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 4,
+              ),
+              child: const Text('Search Projectors'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Search projectors in database with enhanced search
+  Future<void> _searchProjectorsInDatabase(
+    String query,
+    StateSetter setModalState,
+    List<Projector> searchResults,
+    bool isSearching,
+  ) async {
+    if (query.trim().isEmpty) {
+      setModalState(() {
+        searchResults.clear();
+        isSearching = false;
+      });
+      return;
+    }
+
+    setModalState(() {
+      isSearching = true;
+    });
+
+    try {
+      final firestoreService = ref.read(firestoreServiceProvider);
+      final projectorsStream = firestoreService.getProjectors();
+      final allProjectors = await projectorsStream.first;
+
+      // Enhanced search logic
+      final results = allProjectors.where((projector) {
+        final searchLower = query.toLowerCase();
+        return projector.serialNumber.toLowerCase().contains(searchLower) ||
+            projector.modelName.toLowerCase().contains(searchLower) ||
+            projector.projectorName.toLowerCase().contains(searchLower) ||
+            (projector.location?.toLowerCase().contains(searchLower) ?? false);
+      }).toList();
+
+      // Sort by relevance (exact matches first)
+      results.sort((a, b) {
+        final aSerialLower = a.serialNumber.toLowerCase();
+        final bSerialLower = b.serialNumber.toLowerCase();
+        final queryLower = query.toLowerCase();
+
+        final aStartsWith = aSerialLower.startsWith(queryLower);
+        final bStartsWith = bSerialLower.startsWith(queryLower);
+
+        if (aStartsWith && !bStartsWith) return -1;
+        if (!aStartsWith && bStartsWith) return 1;
+        return aSerialLower.compareTo(bSerialLower);
+      });
+
+      setModalState(() {
+        searchResults.clear();
+        searchResults.addAll(results.take(10)); // Limit to 10 results
+        isSearching = false;
+      });
+    } catch (e) {
+      setModalState(() {
+        searchResults.clear();
+        isSearching = false;
+      });
+    }
   }
 
   /// Search projector by serial number
@@ -1246,7 +1763,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                           const SizedBox(height: 24),
 
                           // Action Buttons
-                          _buildActionButtons(),
+                          _buildMainActionButtons(),
                         ],
                       ),
                     ),
@@ -1729,46 +2246,113 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                   color: AppTheme.textTertiary.withValues(alpha: 0.2),
                 ),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: AppTheme.textSecondary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Please scan or select a projector to continue with the issuance process.',
-                      style: TextStyle(
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
                         color: AppTheme.textSecondary,
-                        height: 1.4,
+                        size: 20,
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Please scan or manually enter a projector to continue with the issuance process.',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.qr_code,
+                        color: AppTheme.primaryColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Scan: Use the camera to scan QR codes or barcodes',
+                        style: TextStyle(
+                          color: AppTheme.primaryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.keyboard,
+                        color: AppTheme.accentColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Manual: Type the serial number directly',
+                        style: TextStyle(
+                          color: AppTheme.accentColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _selectProjector,
-                icon: const Icon(Icons.qr_code_scanner),
-                label: const Text('Scan Projector'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppConstants.borderRadius,
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _selectProjector,
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scan Projector'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.borderRadius,
+                        ),
+                      ),
+                      elevation: 4,
+                      shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
                     ),
                   ),
-                  elevation: 4,
-                  shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _showManualProjectorEntry,
+                    icon: const Icon(Icons.keyboard),
+                    label: const Text('Manual Entry'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primaryColor,
+                      side: BorderSide(
+                        color: AppTheme.primaryColor,
+                        width: 1.5,
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.borderRadius,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -1877,42 +2461,79 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
           ),
           const SizedBox(height: 20),
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: AppTheme.backgroundColor,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: AppTheme.textTertiary.withValues(alpha: 0.2),
+                color: AppTheme.primaryColor.withValues(alpha: 0.2),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               children: [
-                _buildInfoRow(
+                _buildEnhancedInfoRow(
                   'Serial Number',
                   _selectedProjector!.serialNumber,
+                  Icons.qr_code,
+                  AppTheme.primaryColor,
                 ),
-                const SizedBox(height: 12),
-                _buildInfoRow('Current Status', _selectedProjector!.status),
+                const SizedBox(height: 16),
+                _buildEnhancedInfoRow(
+                  'Current Status',
+                  _selectedProjector!.status,
+                  Icons.info_outline,
+                  _getStatusColor(_selectedProjector!.status),
+                ),
                 if (_selectedProjector!.modelName.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  _buildInfoRow('Model', _selectedProjector!.modelName),
+                  const SizedBox(height: 16),
+                  _buildEnhancedInfoRow(
+                    'Model',
+                    _selectedProjector!.modelName,
+                    Icons.model_training,
+                    AppTheme.secondaryColor,
+                  ),
                 ],
                 if (_selectedProjector!.projectorName.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  _buildInfoRow('Name', _selectedProjector!.projectorName),
+                  const SizedBox(height: 16),
+                  _buildEnhancedInfoRow(
+                    'Name',
+                    _selectedProjector!.projectorName,
+                    Icons.label,
+                    AppTheme.accentColor,
+                  ),
+                ],
+                if (_selectedProjector!.location?.isNotEmpty == true) ...[
+                  const SizedBox(height: 16),
+                  _buildEnhancedInfoRow(
+                    'Location',
+                    _selectedProjector!.location!,
+                    Icons.location_on,
+                    AppTheme.textSecondary,
+                  ),
                 ],
                 if (_selectedProjector!.lastIssuedTo != null) ...[
-                  const SizedBox(height: 12),
-                  _buildInfoRow(
+                  const SizedBox(height: 16),
+                  _buildEnhancedInfoRow(
                     'Last Issued To',
                     _selectedProjector!.lastIssuedTo!,
+                    Icons.person,
+                    AppTheme.statusIssued,
                   ),
                 ],
                 if (_selectedProjector!.lastIssuedDate != null) ...[
-                  const SizedBox(height: 12),
-                  _buildInfoRow(
+                  const SizedBox(height: 16),
+                  _buildEnhancedInfoRow(
                     'Last Issue Date',
                     _formatDate(_selectedProjector!.lastIssuedDate!),
+                    Icons.schedule,
+                    AppTheme.textSecondary,
                   ),
                 ],
               ],
@@ -1925,7 +2546,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                 child: OutlinedButton.icon(
                   onPressed: _selectProjector,
                   icon: const Icon(Icons.change_circle),
-                  label: const Text('Change Projector'),
+                  label: const Text('Scan Different'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.primaryColor,
                     side: BorderSide(color: AppTheme.primaryColor, width: 1.5),
@@ -1941,9 +2562,27 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
+                  onPressed: _showManualProjectorEntry,
+                  icon: const Icon(Icons.keyboard),
+                  label: const Text('Manual Entry'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.accentColor,
+                    side: BorderSide(color: AppTheme.accentColor, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.borderRadius,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
                   onPressed: _clearProjectorSelection,
                   icon: const Icon(Icons.clear),
-                  label: const Text('Clear Selection'),
+                  label: const Text('Clear'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.textSecondary,
                     side: BorderSide(color: AppTheme.textTertiary, width: 1.5),
@@ -2802,8 +3441,8 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
     );
   }
 
-  /// Build action buttons
-  Widget _buildActionButtons() {
+  /// Build main action buttons
+  Widget _buildMainActionButtons() {
     if (_selectedProjector == null) {
       return Container(
         padding: const EdgeInsets.all(24),
@@ -2857,25 +3496,49 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
               ],
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _selectProjector,
-                icon: const Icon(Icons.qr_code_scanner),
-                label: const Text('Start by Scanning a Projector'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppConstants.borderRadius,
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _selectProjector,
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scan Projector'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.borderRadius,
+                        ),
+                      ),
+                      elevation: 6,
+                      shadowColor: AppTheme.primaryColor.withValues(alpha: 0.4),
                     ),
                   ),
-                  elevation: 6,
-                  shadowColor: AppTheme.primaryColor.withValues(alpha: 0.4),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _showManualProjectorEntry,
+                    icon: const Icon(Icons.keyboard),
+                    label: const Text('Manual Entry'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primaryColor,
+                      side: BorderSide(
+                        color: AppTheme.primaryColor,
+                        width: 1.5,
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.borderRadius,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -3172,20 +3835,43 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
               ),
             ],
 
-            // Quick Add
+            // Quick Actions
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Quick Add',
+                    'Quick Actions',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       color: AppTheme.textSecondary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 12),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.keyboard,
+                        color: AppTheme.primaryColor,
+                        size: 20,
+                      ),
+                    ),
+                    title: const Text('Manual Projector Entry'),
+                    subtitle: const Text('Enter serial number manually'),
+                    onTap: () {
+                      setState(() {
+                        _showQuickActions = false;
+                      });
+                      _showManualProjectorEntry();
+                    },
+                  ),
+                  const SizedBox(height: 8),
                   ListTile(
                     leading: Container(
                       padding: const EdgeInsets.all(8),
@@ -3395,6 +4081,61 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
     );
   }
 
+  /// Build enhanced info row with icons and colors
+  Widget _buildEnhancedInfoRow(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 20, color: color),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color.withValues(alpha: 0.8),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Build info row
   Widget _buildInfoRow(String label, String value) {
     return Row(
@@ -3420,6 +4161,20 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
         ),
       ],
     );
+  }
+
+  /// Get status color for projectors
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Available':
+        return AppTheme.statusAvailable;
+      case 'Issued':
+        return AppTheme.statusIssued;
+      case 'Maintenance':
+        return AppTheme.statusMaintenance;
+      default:
+        return AppTheme.textTertiary;
+    }
   }
 
   /// Format date for display
