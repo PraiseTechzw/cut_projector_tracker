@@ -1557,149 +1557,404 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
     );
   }
 
-  /// Show confirmation dialog before issuing
+  /// Show enhanced confirmation bottom sheet before issuing
   Future<bool> _showConfirmationDialog() async {
-    return await showDialog<bool>(
+    return await showModalBottomSheet<bool>(
           context: context,
-          barrierDismissible: false,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
           builder: (BuildContext context) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-              ),
-              title: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.confirmation_number,
-                      color: AppTheme.primaryColor,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Flexible(
-                    child: Text(
-                      'Confirm Projector Issue',
-                      overflow: TextOverflow.ellipsis,
-                    ),
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, -8),
                   ),
                 ],
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Column(
                 children: [
-                  Text(
-                    'Please confirm the following details before issuing:',
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Projector details
-                  _buildConfirmationItem(
-                    'Projector',
-                    _selectedProjector!.serialNumber,
-                    Icons.qr_code,
-                    AppTheme.primaryColor,
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Lecturer details
-                  _buildConfirmationItem(
-                    'Issuing To',
-                    '${_selectedLecturer!.name} (${_selectedLecturer!.department})',
-                    Icons.person,
-                    AppTheme.accentColor,
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Purpose
-                  _buildConfirmationItem(
-                    'Purpose',
-                    _purposeController.text.trim(),
-                    Icons.assignment,
-                    AppTheme.secondaryColor,
-                  ),
-
-                  // Notes if provided
-                  if (_notesController.text.trim().isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _buildConfirmationItem(
-                      'Notes',
-                      _notesController.text.trim(),
-                      Icons.note,
-                      AppTheme.textSecondary,
-                    ),
-                  ],
-
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                  _buildConfirmationHeader(),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildConfirmationDescription(),
+                          const SizedBox(height: 24),
+                          _buildConfirmationDetails(),
+                          const SizedBox(height: 24),
+                          _buildConfirmationWarning(),
+                          const SizedBox(height: 32),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: AppTheme.primaryColor,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'This action will mark the projector as "Issued" and update the inventory status.',
-                            style: TextStyle(
-                              color: AppTheme.primaryColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
+                  _buildConfirmationActions(),
                 ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: Text(
-                    'Cancel',
-                    style: TextStyle(color: AppTheme.textSecondary),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppConstants.borderRadius,
-                      ),
-                    ),
-                  ),
-                  child: const Text('Confirm & Issue'),
-                ),
-              ],
             );
           },
         ) ??
         false;
+  }
+
+  /// Build confirmation header
+  Widget _buildConfirmationHeader() {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      child: Column(
+        children: [
+          Container(
+            width: 50,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppTheme.textTertiary.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.primaryColor,
+                        AppTheme.primaryColor.withValues(alpha: 0.8),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.confirmation_number,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Confirm Projector Issue',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: AppTheme.textPrimary,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.5,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Review details before proceeding',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build confirmation description
+  Widget _buildConfirmationDescription() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: AppTheme.primaryColor, size: 24),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              'Please review the following details carefully before issuing the projector. This action cannot be undone.',
+              style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build confirmation details
+  Widget _buildConfirmationDetails() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Issue Details',
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Projector details
+        _buildEnhancedConfirmationItem(
+          'Projector',
+          _selectedProjector!.serialNumber,
+          Icons.qr_code,
+          AppTheme.primaryColor,
+          subtitle: _selectedProjector!.modelName.isNotEmpty
+              ? _selectedProjector!.modelName
+              : null,
+        ),
+        const SizedBox(height: 16),
+
+        // Lecturer details
+        _buildEnhancedConfirmationItem(
+          'Issuing To',
+          _selectedLecturer!.name,
+          Icons.person,
+          AppTheme.accentColor,
+          subtitle: _selectedLecturer!.department,
+        ),
+        const SizedBox(height: 16),
+
+        // Purpose
+        _buildEnhancedConfirmationItem(
+          'Purpose',
+          _purposeController.text.trim(),
+          Icons.assignment,
+          AppTheme.secondaryColor,
+        ),
+
+        // Notes if provided
+        if (_notesController.text.trim().isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildEnhancedConfirmationItem(
+            'Additional Notes',
+            _notesController.text.trim(),
+            Icons.note,
+            AppTheme.textSecondary,
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Build enhanced confirmation item
+  Widget _buildEnhancedConfirmationItem(
+    String label,
+    String value,
+    IconData icon,
+    Color color, {
+    String? subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 24, color: color),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color.withValues(alpha: 0.8),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: color.withValues(alpha: 0.7),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build confirmation warning
+  Widget _buildConfirmationWarning() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.warningColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.warningColor.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.warning_amber_rounded,
+              color: AppTheme.warningColor,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Important Notice',
+                  style: TextStyle(
+                    color: AppTheme.warningColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'This action will mark the projector as "Issued" and update the inventory status. The projector will no longer be available for other users.',
+                  style: TextStyle(
+                    color: AppTheme.warningColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build confirmation actions
+  Widget _buildConfirmationActions() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.textSecondary,
+                side: BorderSide(color: AppTheme.textTertiary, width: 1.5),
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 6,
+                shadowColor: AppTheme.primaryColor.withValues(alpha: 0.4),
+              ),
+              child: const Text(
+                'Confirm & Issue',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Build confirmation item for the dialog
