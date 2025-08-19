@@ -22,27 +22,150 @@ class ReturnProjectorScreen extends ConsumerStatefulWidget {
       _ReturnProjectorScreenState();
 }
 
-class _ReturnProjectorScreenState extends ConsumerState<ReturnProjectorScreen> {
+class _ReturnProjectorScreenState extends ConsumerState<ReturnProjectorScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _returnNotesController = TextEditingController();
   bool _isLoading = false;
+  bool _isValidating = false;
   ProjectorTransaction? _currentTransaction;
+
+  // Animation controllers
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  // Smart validation
+  bool _isEligibleForReturn = false;
+  String? _validationMessage;
+  List<String> _returnNoteSuggestions = [];
 
   @override
   void initState() {
     super.initState();
     _currentTransaction = widget.activeTransaction;
+    _setupAnimations();
+    _validateProjector();
+    _generateSuggestions();
+  }
+
+  void _setupAnimations() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
+
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+
+    _fadeController.forward();
+    _slideController.forward();
+  }
+
+  /// Validate projector eligibility for return
+  void _validateProjector() {
+    if (widget.projector.status != AppConstants.statusIssued) {
+      _isEligibleForReturn = false;
+      _validationMessage = 'This projector is not currently issued';
+      return;
+    }
+
+    if (_currentTransaction == null) {
+      _isEligibleForReturn = false;
+      _validationMessage = 'No active transaction found';
+      return;
+    }
+
+    // Check for long-term usage
+    final daysIssued = DateTime.now()
+        .difference(_currentTransaction!.dateIssued)
+        .inDays;
+    if (daysIssued > 30) {
+      _isEligibleForReturn = false;
+      _validationMessage =
+          'Projector issued for over 30 days. Contact administrator.';
+      return;
+    }
+
+    _isEligibleForReturn = true;
+    _validationMessage = null;
+  }
+
+  /// Generate intelligent return note suggestions
+  void _generateSuggestions() {
+    if (_currentTransaction == null) return;
+
+    final daysIssued = DateTime.now()
+        .difference(_currentTransaction!.dateIssued)
+        .inDays;
+
+    _returnNoteSuggestions = [
+      'Projector in good condition',
+      'No visible damage',
+      'All accessories included',
+      'Ready for next use',
+    ];
+
+    if (daysIssued > 7) {
+      _returnNoteSuggestions.add(
+        'Extended use - thorough inspection recommended',
+      );
+      _returnNoteSuggestions.add('Check for wear and tear');
+    }
+
+    if (daysIssued > 14) {
+      _returnNoteSuggestions.add(
+        'Long-term usage - maintenance may be required',
+      );
+      _returnNoteSuggestions.add('Inspect lens and cooling system');
+    }
   }
 
   @override
   void dispose() {
     _returnNotesController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
   /// Return projector
   Future<void> _returnProjector() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Intelligent validation
+    if (!_isEligibleForReturn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _validationMessage ?? 'Projector cannot be returned',
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppTheme.errorColor,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
       return;
     }
 
@@ -56,6 +179,15 @@ class _ReturnProjectorScreenState extends ConsumerState<ReturnProjectorScreen> {
       return;
     }
 
+    // Show confirmation for long-term returns
+    final daysIssued = DateTime.now()
+        .difference(_currentTransaction!.dateIssued)
+        .inDays;
+    if (daysIssued > 14) {
+      final shouldProceed = await _showLongTermReturnConfirmation(daysIssued);
+      if (!shouldProceed) return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -67,6 +199,7 @@ class _ReturnProjectorScreenState extends ConsumerState<ReturnProjectorScreen> {
       await firestoreService.returnProjector(
         transactionId: _currentTransaction!.id,
         projectorId: widget.projector.id,
+        returnNotes: _returnNotesController.text.trim(),
       );
 
       if (mounted) {
@@ -123,6 +256,52 @@ class _ReturnProjectorScreenState extends ConsumerState<ReturnProjectorScreen> {
         );
       }
     }
+  }
+
+  /// Show confirmation dialog for long-term returns
+  Future<bool> _showLongTermReturnConfirmation(int daysIssued) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.orange, size: 24),
+                const SizedBox(width: 8),
+                const Text('Long-term Return'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This projector has been issued for $daysIssued days.',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Please ensure thorough inspection and note any wear or damage.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Proceed with Return'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 
   @override

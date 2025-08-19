@@ -110,9 +110,11 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
   @override
   void dispose() {
     _returnNotesController.dispose();
+    _searchController.dispose();
     _confettiController.dispose();
     _fadeController.dispose();
     _slideController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -207,7 +209,7 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
     if (_selectedProjector == null) return;
 
     setState(() {
-      _isLoading = true;
+      _isTransactionLoading = true;
       _errorMessage = null;
     });
 
@@ -227,22 +229,51 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
         if (activeTransaction != null) {
           setState(() {
             _activeTransaction = activeTransaction;
-            _isLoading = false;
+            _isTransactionLoading = false;
           });
+
+          // Auto-fill return notes with intelligent suggestions
+          _autoFillReturnNotes();
           return; // Exit the stream after finding the transaction
         }
       }
 
       // If we reach here, no active transaction was found
       setState(() {
-        _isLoading = false;
+        _isTransactionLoading = false;
         _errorMessage = 'No active transaction found for this projector';
       });
     } catch (e) {
       setState(() {
-        _isLoading = false;
-        _errorMessage = e.toString();
+        _isTransactionLoading = false;
+        _errorMessage = 'Error looking up transaction: $e';
       });
+    }
+  }
+
+  /// Auto-fill return notes with intelligent suggestions
+  void _autoFillReturnNotes() {
+    if (_activeTransaction == null || _selectedProjector == null) return;
+
+    final daysIssued = DateTime.now()
+        .difference(_activeTransaction!.dateIssued)
+        .inDays;
+    String autoNote = '';
+
+    if (daysIssued <= 1) {
+      autoNote = 'Same day return - projector in excellent condition';
+    } else if (daysIssued <= 3) {
+      autoNote = 'Short-term use - minimal wear expected';
+    } else if (daysIssued <= 7) {
+      autoNote = 'Weekly use - standard inspection required';
+    } else if (daysIssued <= 14) {
+      autoNote = 'Extended use - thorough inspection recommended';
+    } else {
+      autoNote = 'Long-term use - maintenance may be required';
+    }
+
+    if (_returnNotesController.text.isEmpty) {
+      _returnNotesController.text = autoNote;
     }
   }
 
@@ -254,9 +285,24 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
       return;
     }
 
-    if (_selectedProjector!.status != AppConstants.statusIssued) {
+    // Intelligent validation
+    if (!_isProjectorEligibleForReturn(_selectedProjector!)) {
+      String errorMsg = 'This projector cannot be returned';
+
+      if (_selectedProjector!.status != AppConstants.statusIssued) {
+        errorMsg = 'This projector is not currently issued';
+      } else if (_activeTransaction != null) {
+        final daysIssued = DateTime.now()
+            .difference(_activeTransaction!.dateIssued)
+            .inDays;
+        if (daysIssued > 30) {
+          errorMsg =
+              'Projector has been issued for over 30 days. Please contact administrator.';
+        }
+      }
+
       setState(() {
-        _errorMessage = 'This projector is not currently issued';
+        _errorMessage = errorMsg;
       });
       return;
     }
@@ -264,6 +310,17 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
     // Validate form
     if (!_formKey.currentState!.validate()) {
       return;
+    }
+
+    // Show confirmation dialog for long-term returns
+    if (_activeTransaction != null) {
+      final daysIssued = DateTime.now()
+          .difference(_activeTransaction!.dateIssued)
+          .inDays;
+      if (daysIssued > 14) {
+        final shouldProceed = await _showLongTermReturnConfirmation(daysIssued);
+        if (!shouldProceed) return;
+      }
     }
 
     setState(() {
@@ -297,6 +354,52 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
         _errorMessage = 'Error returning projector: $e';
       });
     }
+  }
+
+  /// Show confirmation dialog for long-term returns
+  Future<bool> _showLongTermReturnConfirmation(int daysIssued) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.orange, size: 24),
+                const SizedBox(width: 8),
+                const Text('Long-term Return'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This projector has been issued for $daysIssued days.',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Please ensure thorough inspection and note any wear or damage.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Proceed with Return'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 
   void _showSuccessDialog() {
@@ -465,6 +568,9 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
 
                       // Projector Selection
                       _buildProjectorSelection(),
+
+                      // Scanning Status
+                      if (_scanStatus != null) _buildScanStatus(),
 
                       const SizedBox(height: 24),
 
@@ -729,6 +835,13 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                const Spacer(),
+                IconButton(
+                  onPressed: _showSmartSuggestions,
+                  icon: const Icon(Icons.lightbulb_outline),
+                  tooltip: 'Smart Suggestions',
+                  color: AppTheme.primaryColor,
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -766,6 +879,99 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
                     return 'Return notes are required for tracking purposes';
                   }
                   return null;
+                },
+              ),
+            ),
+
+            // Smart suggestions chips
+            if (_selectedProjector != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Quick Suggestions:',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _getSmartSuggestions()
+                    .take(4)
+                    .map(
+                      (suggestion) => ActionChip(
+                        label: Text(
+                          suggestion,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        onPressed: () {
+                          if (_returnNotesController.text.isEmpty) {
+                            _returnNotesController.text = suggestion;
+                          } else {
+                            _returnNotesController.text += '; $suggestion';
+                          }
+                        },
+                        backgroundColor: AppTheme.primaryColor.withValues(
+                          alpha: 0.1,
+                        ),
+                        labelStyle: TextStyle(color: AppTheme.primaryColor),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show smart suggestions modal
+  void _showSmartSuggestions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.lightbulb, color: AppTheme.primaryColor),
+                const SizedBox(width: 12),
+                Text(
+                  'Smart Suggestions',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Based on projector usage and condition:',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _getSmartSuggestions().length,
+                itemBuilder: (context, index) {
+                  final suggestion = _getSmartSuggestions()[index];
+                  return ListTile(
+                    leading: const Icon(Icons.check_circle_outline),
+                    title: Text(suggestion),
+                    onTap: () {
+                      if (_returnNotesController.text.isEmpty) {
+                        _returnNotesController.text = suggestion;
+                      } else {
+                        _returnNotesController.text += '; $suggestion';
+                      }
+                      Navigator.of(context).pop();
+                    },
+                  );
                 },
               ),
             ),
@@ -891,6 +1097,46 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
               value,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build scanning status indicator
+  Widget _buildScanStatus() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _pulseAnimation.value,
+                child: Icon(
+                  Icons.camera_alt,
+                  color: AppTheme.primaryColor,
+                  size: 24,
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _scanStatus!,
+              style: TextStyle(
+                color: AppTheme.primaryColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
