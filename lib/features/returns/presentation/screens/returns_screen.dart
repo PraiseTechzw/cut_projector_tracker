@@ -8,6 +8,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../shared/models/projector.dart';
 import '../../../../shared/models/transaction.dart';
+import 'return_projector_screen.dart';
 
 /// Projector return screen for processing projector returns
 class ReturnsScreen extends ConsumerStatefulWidget {
