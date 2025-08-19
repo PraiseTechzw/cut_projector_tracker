@@ -481,7 +481,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             crossAxisCount: 2,
             crossAxisSpacing: 20,
             mainAxisSpacing: 20,
-            childAspectRatio: 1.4,
+            childAspectRatio: 1.15,
             children: [
               _buildEnhancedStatCard(
                 'Total Projectors',
@@ -827,7 +827,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     List<String> details,
   ) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      constraints: const BoxConstraints(minHeight: 145),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.backgroundColor,
         borderRadius: BorderRadius.circular(20),
@@ -857,7 +858,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     width: 1,
                   ),
                 ),
-                child: Icon(icon, color: color, size: 18),
+                child: Icon(icon, color: color, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -873,44 +874,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           Text(
             value,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: color,
               fontWeight: FontWeight.bold,
-              fontSize: 18,
+              fontSize: 22,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 6),
           if (details.isNotEmpty)
             Flexible(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 2,
-                    height: 2,
-                    margin: const EdgeInsets.only(top: 3),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.6),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  Expanded(
-                    child: Text(
-                      details.first,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textTertiary,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 8,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 2,
+                      height: 2,
+                      margin: const EdgeInsets.only(top: 3),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Text(
+                        details.first,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textTertiary,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 8,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
         ],

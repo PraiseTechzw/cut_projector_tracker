@@ -66,12 +66,88 @@ class FirestoreService {
     }
   }
 
+  /// Find all projectors with duplicate serial numbers
+  Future<List<Projector>> findDuplicateSerialNumbers() async {
+    try {
+      final allProjectors = await _projectorsCollection.get();
+      final projectors = allProjectors.docs
+          .map((doc) => Projector.fromFirestore(doc))
+          .toList();
+
+      // Group by serial number and find duplicates
+      final Map<String, List<Projector>> groupedBySerial = {};
+      for (final projector in projectors) {
+        final serial = projector.serialNumber.toUpperCase();
+        groupedBySerial.putIfAbsent(serial, () => []).add(projector);
+      }
+
+      // Return only the duplicates (more than one projector with same serial)
+      final duplicates = <Projector>[];
+      for (final group in groupedBySerial.values) {
+        if (group.length > 1) {
+          duplicates.addAll(group);
+        }
+      }
+
+      return duplicates;
+    } catch (e) {
+      throw 'Failed to find duplicate serial numbers: $e';
+    }
+  }
+
+  /// Remove duplicate projectors, keeping the most recent one
+  Future<void> removeDuplicateProjectors() async {
+    try {
+      final duplicates = await findDuplicateSerialNumbers();
+
+      if (duplicates.isEmpty) {
+        return; // No duplicates found
+      }
+
+      // Group duplicates by serial number
+      final Map<String, List<Projector>> groupedDuplicates = {};
+      for (final projector in duplicates) {
+        final serial = projector.serialNumber.toUpperCase();
+        groupedDuplicates.putIfAbsent(serial, () => []).add(projector);
+      }
+
+      // For each group of duplicates, keep the most recent one and delete the rest
+      for (final group in groupedDuplicates.values) {
+        if (group.length > 1) {
+          // Sort by creation date, keep the most recent
+          group.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          // keepProjector is the most recent one we're keeping
+          final deleteProjectors = group.skip(1).toList();
+
+          // Delete the older duplicates
+          for (final projector in deleteProjectors) {
+            await _projectorsCollection.doc(projector.id).delete();
+          }
+        }
+      }
+    } catch (e) {
+      throw 'Failed to remove duplicate projectors: $e';
+    }
+  }
+
   /// Add new projector
   Future<String> addProjector(Projector projector) async {
     try {
+      // Check if projector with same serial number already exists
+      final existingProjector = await getProjectorBySerialNumber(
+        projector.serialNumber,
+      );
+      if (existingProjector != null) {
+        throw 'A projector with serial number "${projector.serialNumber}" already exists';
+      }
+
       final docRef = await _projectorsCollection.add(projector.toFirestore());
       return docRef.id;
     } catch (e) {
+      // Re-throw known duplicate error
+      if (e is String && e.contains('already exists')) {
+        rethrow;
+      }
       throw 'Failed to add projector: $e';
     }
   }
@@ -79,10 +155,22 @@ class FirestoreService {
   /// Update projector
   Future<void> updateProjector(Projector projector) async {
     try {
+      // Check if another projector with same serial number already exists
+      final existingProjector = await getProjectorBySerialNumber(
+        projector.serialNumber,
+      );
+      if (existingProjector != null && existingProjector.id != projector.id) {
+        throw 'A projector with serial number "${projector.serialNumber}" already exists';
+      }
+
       await _projectorsCollection
           .doc(projector.id)
           .update(projector.toFirestore());
     } catch (e) {
+      // Re-throw known duplicate error
+      if (e is String && e.contains('already exists')) {
+        rethrow;
+      }
       throw 'Failed to update projector: $e';
     }
   }

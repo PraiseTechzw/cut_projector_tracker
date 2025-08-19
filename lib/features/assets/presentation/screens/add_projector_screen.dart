@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -45,6 +46,8 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
   bool _isScanning = false;
   String _selectedStatus = AppConstants.statusAvailable;
   MobileScannerController? _scannerController;
+  Timer? _debounceTimer;
+  String? _serialNumberError;
 
   @override
   void initState() {
@@ -88,7 +91,45 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
     _notesController.dispose();
     _statusController.dispose();
     _scannerController?.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
+  }
+
+  /// Validate serial number for duplicates with debouncing
+  void _validateSerialNumber(String value) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
+      if (value.trim().isNotEmpty && value.trim().length >= 3) {
+        try {
+          final firestoreService = ref.read(firestoreServiceProvider);
+          final existingProjector = await firestoreService
+              .getProjectorBySerialNumber(value.trim().toUpperCase());
+
+          if (mounted) {
+            setState(() {
+              if (existingProjector != null) {
+                _serialNumberError = 'This serial number already exists';
+              } else {
+                _serialNumberError = null;
+              }
+            });
+          }
+        } catch (e) {
+          // Handle error silently for validation
+          if (mounted) {
+            setState(() {
+              _serialNumberError = null;
+            });
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _serialNumberError = null;
+          });
+        }
+      }
+    });
   }
 
   @override
@@ -236,8 +277,12 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
                   if (value.trim().length < 3) {
                     return 'Serial number must be at least 3 characters';
                   }
+                  if (_serialNumberError != null) {
+                    return _serialNumberError;
+                  }
                   return null;
                 },
+                onChanged: _validateSerialNumber,
                 textCapitalization: TextCapitalization.characters,
                 style: const TextStyle(fontFamily: 'monospace'),
               ),
@@ -384,6 +429,7 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
     required IconData icon,
     String? helperText,
     String? Function(String?)? validator,
+    Function(String)? onChanged,
     int maxLines = 1,
     TextCapitalization? textCapitalization,
     TextStyle? style,
@@ -432,6 +478,7 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
         TextFormField(
           controller: controller,
           validator: validator,
+          onChanged: onChanged,
           maxLines: maxLines,
           textCapitalization: textCapitalization ?? TextCapitalization.none,
           style: style,
@@ -1092,20 +1139,33 @@ class _AddProjectorScreenState extends ConsumerState<AddProjectorScreen> {
           _isLoading = false;
         });
 
+        // Check if it's a duplicate serial number error
+        String errorMessage = 'Error adding projector: ${e.toString()}';
+        IconData errorIcon = Icons.error;
+
+        if (e.toString().contains('already exists')) {
+          errorMessage =
+              'Serial number already exists! Please use a different serial number.';
+          errorIcon = Icons.content_copy;
+
+          // Also trigger form validation to highlight the field
+          if (_formKey.currentState != null) {
+            _formKey.currentState!.validate();
+          }
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.error, color: Colors.white),
+                Icon(errorIcon, color: Colors.white),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: Text('Error adding projector: ${e.toString()}'),
-                ),
+                Expanded(child: Text(errorMessage)),
               ],
             ),
             backgroundColor: AppTheme.errorColor,
             behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppConstants.borderRadius),
             ),
