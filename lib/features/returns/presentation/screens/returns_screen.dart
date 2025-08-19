@@ -25,11 +25,15 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
   Projector? _selectedProjector;
   ProjectorTransaction? _activeTransaction;
   bool _isLoading = false;
+  bool _isScanning = false;
+  bool _isTransactionLoading = false;
   String? _errorMessage;
   String? _successMessage;
+  String? _scanStatus;
 
   // Form controllers
   final _returnNotesController = TextEditingController();
+  final _searchController = TextEditingController();
 
   // Confetti controller
   late ConfettiController _confettiController;
@@ -37,8 +41,22 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
   // Animation controllers
   late AnimationController _fadeController;
   late AnimationController _slideController;
+  late AnimationController _pulseController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  late Animation<double> _pulseAnimation;
+
+  // Smart suggestions
+  List<String> _returnNoteSuggestions = [
+    'Projector in good condition',
+    'Minor wear and tear',
+    'Lens cleaned',
+    'Cable included',
+    'Remote control working',
+    'No damage reported',
+    'Ready for next use',
+    'Maintenance recommended',
+  ];
 
   @override
   void initState() {
@@ -70,8 +88,18 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
 
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _pulseAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.2,
+    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+
     _fadeController.forward();
     _slideController.forward();
+    _pulseController.repeat(reverse: true);
   }
 
   void _setupConfetti() {
@@ -90,18 +118,86 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen>
   }
 
   Future<void> _scanProjector() async {
-    final result = await context.push(
-      '/scan-projector',
-      extra: {'purpose': 'return'},
-    );
-    if (result != null && result is Projector) {
+    setState(() {
+      _isScanning = true;
+      _scanStatus = 'Scanning projector...';
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await context.push(
+        '/scan-projector',
+        extra: {'purpose': 'return'},
+      );
+      
+      if (result != null && result is Projector) {
+        setState(() {
+          _selectedProjector = result;
+          _activeTransaction = null;
+          _scanStatus = 'Projector found! Looking up transaction...';
+        });
+        
+        // Intelligent transaction lookup with better error handling
+        await _lookupActiveTransaction();
+        
+        setState(() {
+          _scanStatus = null;
+        });
+      } else {
+        setState(() {
+          _scanStatus = 'No projector selected';
+        });
+      }
+    } catch (e) {
       setState(() {
-        _selectedProjector = result;
-        _activeTransaction = null;
-        _errorMessage = null;
+        _errorMessage = 'Error during scanning: $e';
+        _scanStatus = null;
       });
-      _lookupActiveTransaction();
+    } finally {
+      setState(() {
+        _isScanning = false;
+      });
     }
+  }
+
+  /// Intelligent projector validation
+  bool _isProjectorEligibleForReturn(Projector projector) {
+    if (projector.status != AppConstants.statusIssued) {
+      return false;
+    }
+    
+    // Check if projector has been issued for too long (e.g., more than 30 days)
+    if (_activeTransaction != null) {
+      final daysIssued = DateTime.now().difference(_activeTransaction!.dateIssued).inDays;
+      if (daysIssued > 30) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  /// Get intelligent return note suggestions based on projector condition
+  List<String> _getSmartSuggestions() {
+    if (_selectedProjector == null) return _returnNoteSuggestions;
+    
+    // Filter suggestions based on projector status and transaction duration
+    List<String> suggestions = [..._returnNoteSuggestions];
+    
+    if (_activeTransaction != null) {
+      final daysIssued = DateTime.now().difference(_activeTransaction!.dateIssued).inDays;
+      
+      if (daysIssued > 7) {
+        suggestions.add('Extended use period - check for wear');
+        suggestions.add('May need maintenance after long use');
+      }
+      
+      if (daysIssued > 14) {
+        suggestions.add('Long-term usage - thorough inspection needed');
+      }
+    }
+    
+    return suggestions;
   }
 
   Future<void> _lookupActiveTransaction() async {
