@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firebase_auth_service.dart';
+import '../../../../core/services/permission_service.dart';
 
 /// Splash screen shown when the app starts
 class SplashScreen extends ConsumerStatefulWidget {
@@ -26,6 +27,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late Animation<double> _loadingRotationAnimation;
   
   bool _isInitialized = false;
+  bool _permissionsChecked = false;
+  CameraPermissionResult? _cameraPermissionResult;
   String? _errorMessage;
 
   @override
@@ -127,6 +130,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         _isInitialized = true;
       });
 
+      // First, check camera permissions (professional apps do this early)
+      await _checkCameraPermissions();
+
       // Wait a bit for Firebase to initialize
       await Future.delayed(const Duration(milliseconds: 500));
       
@@ -153,12 +159,88 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
   }
 
+  /// Check camera permissions early in app lifecycle
+  Future<void> _checkCameraPermissions() async {
+    try {
+      final permissionService = ref.read(permissionServiceProvider);
+      final result = await permissionService.initializeCameraPermission();
+      
+      if (mounted) {
+        setState(() {
+          _cameraPermissionResult = result;
+          _permissionsChecked = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _cameraPermissionResult = CameraPermissionResult.error;
+          _permissionsChecked = true;
+        });
+      }
+    }
+  }
+
   void _navigateToHome() {
     context.go('/home');
   }
 
   void _navigateToLogin() {
     context.go('/signin');
+  }
+
+  String _getLoadingText() {
+    if (!_permissionsChecked) {
+      return 'Checking permissions...';
+    }
+    return 'Initializing...';
+  }
+
+  IconData _getPermissionIcon() {
+    switch (_cameraPermissionResult) {
+      case CameraPermissionResult.granted:
+        return Icons.check_circle;
+      case CameraPermissionResult.denied:
+      case CameraPermissionResult.permanentlyDenied:
+      case CameraPermissionResult.restricted:
+        return Icons.warning;
+      case CameraPermissionResult.error:
+        return Icons.error;
+      default:
+        return Icons.help;
+    }
+  }
+
+  Color _getPermissionColor() {
+    switch (_cameraPermissionResult) {
+      case CameraPermissionResult.granted:
+        return Colors.green;
+      case CameraPermissionResult.denied:
+      case CameraPermissionResult.permanentlyDenied:
+      case CameraPermissionResult.restricted:
+        return Colors.orange;
+      case CameraPermissionResult.error:
+        return AppTheme.errorColor;
+      default:
+        return AppTheme.textSecondary;
+    }
+  }
+
+  String _getPermissionStatusText() {
+    switch (_cameraPermissionResult) {
+      case CameraPermissionResult.granted:
+        return 'Camera access granted';
+      case CameraPermissionResult.denied:
+        return 'Camera access denied';
+      case CameraPermissionResult.permanentlyDenied:
+        return 'Camera permanently denied';
+      case CameraPermissionResult.restricted:
+        return 'Camera access restricted';
+      case CameraPermissionResult.error:
+        return 'Camera permission error';
+      default:
+        return 'Checking camera access...';
+    }
   }
 
   @override
@@ -276,11 +358,35 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Initializing...',
+                  _getLoadingText(),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppTheme.textSecondary,
                   ),
+                  textAlign: TextAlign.center,
                 ),
+                
+                // Permission status indicator
+                if (_permissionsChecked && _cameraPermissionResult != null) ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _getPermissionIcon(),
+                        size: 16,
+                        color: _getPermissionColor(),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _getPermissionStatusText(),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: _getPermissionColor(),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ] else ...[
                 const SizedBox(height: 20),
                 Text(

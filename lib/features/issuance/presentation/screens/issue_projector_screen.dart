@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/firestore_service.dart';
@@ -8,16 +9,17 @@ import '../../../../shared/models/lecturer.dart';
 
 /// Enhanced screen for issuing projectors to lecturers
 class IssueProjectorScreen extends ConsumerStatefulWidget {
-  final Projector projector;
+  final Projector? projector; // Make projector optional
 
-  const IssueProjectorScreen({super.key, required this.projector});
+  const IssueProjectorScreen({super.key, this.projector});
 
   @override
   ConsumerState<IssueProjectorScreen> createState() =>
       _IssueProjectorScreenState();
 }
 
-class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
+class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _searchController = TextEditingController();
   final _notesController = TextEditingController();
@@ -41,12 +43,61 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
   List<Lecturer> _allLecturers = [];
   List<Lecturer> _recentLecturers = [];
 
+  // Add projector selection state
+  Projector? _selectedProjector;
+  bool _isSelectingProjector = false; // New state variable
+
+  // Animation controllers
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late AnimationController _scaleController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _scaleAnimation;
+
   @override
   void initState() {
     super.initState();
+    _selectedProjector = widget.projector; // Use passed projector if available
+    _setupAnimations();
     _loadAllLecturers();
     _loadRecentLecturers();
-    _validateProjectorStatus();
+    if (_selectedProjector != null) {
+      _validateProjectorStatus();
+    }
+  }
+
+  void _setupAnimations() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
+
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.95,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _scaleController, curve: Curves.easeOut));
+
+    _fadeController.forward();
+    _slideController.forward();
+    _scaleController.forward();
   }
 
   @override
@@ -59,6 +110,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
     _newLecturerEmailController.dispose();
     _newLecturerPhoneNumberController.dispose();
     _newLecturerEmployeeIdController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
+    _scaleController.dispose();
     super.dispose();
   }
 
@@ -85,7 +139,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
 
   /// Validate projector status before allowing issue
   void _validateProjectorStatus() {
-    if (widget.projector.status != AppConstants.statusAvailable) {
+    if (_selectedProjector!.status != AppConstants.statusAvailable) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -95,12 +149,12 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Warning: Projector "${widget.projector.serialNumber}" is currently ${widget.projector.status.toLowerCase()}',
+                    'Warning: Projector "${_selectedProjector!.serialNumber}" is currently ${_selectedProjector!.status.toLowerCase()}',
                   ),
                 ),
               ],
             ),
-            backgroundColor: AppTheme.warningColor ?? Colors.orange,
+            backgroundColor: AppTheme.warningColor,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
@@ -133,20 +187,30 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow('Serial Number', widget.projector.serialNumber),
-            _buildInfoRow('Current Status', widget.projector.status),
-            if (widget.projector.lastIssuedTo != null)
-              _buildInfoRow('Last Issued To', widget.projector.lastIssuedTo!),
-            if (widget.projector.lastIssuedDate != null)
+            _buildInfoRow('Serial Number', _selectedProjector!.serialNumber),
+            _buildInfoRow('Current Status', _selectedProjector!.status),
+            if (_selectedProjector!.modelName.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildInfoRow('Model', _selectedProjector!.modelName),
+            ],
+            if (_selectedProjector!.projectorName.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildInfoRow('Name', _selectedProjector!.projectorName),
+            ],
+            if (_selectedProjector!.lastIssuedTo != null) ...[
+              const SizedBox(height: 12),
+              _buildInfoRow(
+                'Last Issued To',
+                _selectedProjector!.lastIssuedTo!,
+              ),
+            ],
+            if (_selectedProjector!.lastIssuedDate != null) ...[
+              const SizedBox(height: 12),
               _buildInfoRow(
                 'Last Issue Date',
-                _formatDate(widget.projector.lastIssuedDate!),
+                _formatDate(_selectedProjector!.lastIssuedDate!),
               ),
-            if (widget.projector.lastReturnDate != null)
-              _buildInfoRow(
-                'Last Return Date',
-                _formatDate(widget.projector.lastReturnDate!),
-              ),
+            ],
           ],
         ),
         actions: [
@@ -185,6 +249,259 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
     } catch (e) {
       // Ignore errors for recent lecturers
     }
+  }
+
+  /// Scan or select projector
+  Future<void> _selectProjector() async {
+    final result = await context.push(
+      '/scan-projector',
+      extra: {'purpose': 'issue'},
+    );
+    if (result != null && result is Projector) {
+      setState(() {
+        _selectedProjector = result;
+        _isSelectingProjector = false;
+      });
+      _validateProjectorStatus();
+    }
+  }
+
+  /// Show manual projector entry bottom sheet
+  void _showManualProjectorEntry() {
+    final manualEntryController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Header
+            Container(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.keyboard,
+                      color: AppTheme.primaryColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Manual Projector Entry',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        Text(
+                          'Enter projector serial number manually',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Input field
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: TextField(
+                controller: manualEntryController,
+                decoration: InputDecoration(
+                  labelText: 'Projector Serial Number',
+                  hintText: 'Enter the projector serial number...',
+                  prefixIcon: const Icon(Icons.qr_code),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: AppTheme.textTertiary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: AppTheme.textTertiary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: AppTheme.primaryColor,
+                      width: 2,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: AppTheme.backgroundColor,
+                ),
+                textCapitalization: TextCapitalization.characters,
+                onSubmitted: (value) => _searchProjectorBySerial(value),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Action buttons
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.textSecondary,
+                        side: BorderSide(
+                          color: AppTheme.textTertiary,
+                          width: 1.5,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () =>
+                          _searchProjectorBySerial(manualEntryController.text),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 4,
+                      ),
+                      child: const Text('Search Projector'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Search projector by serial number
+  Future<void> _searchProjectorBySerial(String serialNumber) async {
+    if (serialNumber.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a serial number'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final firestoreService = ref.read(firestoreServiceProvider);
+      final projectorsStream = firestoreService.getProjectors();
+      final projectors = await projectorsStream.first;
+
+      final projector = projectors.firstWhere(
+        (p) =>
+            p.serialNumber.toLowerCase() == serialNumber.trim().toLowerCase(),
+        orElse: () => Projector(
+          id: '',
+          serialNumber: '',
+          modelName: '',
+          projectorName: '',
+          status: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      if (projector.id.isNotEmpty) {
+        Navigator.of(context).pop(); // Close bottom sheet
+
+        setState(() {
+          _selectedProjector = projector;
+        });
+
+        _validateProjectorStatus();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Projector ${projector.serialNumber} found!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Projector with serial number "$serialNumber" not found',
+            ),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error searching for projector: $e'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+    }
+  }
+
+  /// Clear projector selection
+  void _clearProjectorSelection() {
+    setState(() {
+      _selectedProjector = null;
+      _selectedLecturer = null;
+      _notesController.clear();
+      _purposeController.clear();
+    });
   }
 
   /// Search lecturers with enhanced logic
@@ -426,11 +743,11 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
     }
 
     // Check if projector is available
-    if (widget.projector.status != AppConstants.statusAvailable) {
+    if (_selectedProjector!.status != AppConstants.statusAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Projector is currently ${widget.projector.status.toLowerCase()}',
+            'Projector is currently ${_selectedProjector!.status.toLowerCase()}',
           ),
           backgroundColor: AppTheme.errorColor,
         ),
@@ -447,9 +764,9 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
 
       // Issue the projector
       await firestoreService.issueProjector(
-        projectorId: widget.projector.id,
+        projectorId: _selectedProjector!.id,
         lecturerId: _selectedLecturer!.id,
-        projectorSerialNumber: widget.projector.serialNumber,
+        projectorSerialNumber: _selectedProjector!.serialNumber,
         lecturerName: _selectedLecturer!.name,
         purpose: _purposeController.text.trim().isNotEmpty
             ? _purposeController.text.trim()
@@ -467,7 +784,7 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Projector "${widget.projector.serialNumber}" issued to ${_selectedLecturer!.name} successfully!',
+                    'Projector "${_selectedProjector!.serialNumber}" issued to ${_selectedLecturer!.name} successfully!',
                   ),
                 ),
               ],
@@ -533,48 +850,83 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
             tooltip: 'Quick Actions',
           ),
         ],
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppTheme.primaryColor,
+                AppTheme.primaryColor.withValues(alpha: 0.8),
+              ],
+            ),
+          ),
+        ),
       ),
       body: Stack(
         children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(AppConstants.defaultPadding),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceColor,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
+          // Background gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppTheme.primaryColor.withValues(alpha: 0.05),
+                  AppTheme.backgroundColor,
                 ],
               ),
-              padding: const EdgeInsets.all(AppConstants.largePadding),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Enhanced Header
-                    _buildEnhancedHeader(),
-                    const SizedBox(height: 24),
+            ),
+          ),
 
-                    // Projector Information Section
-                    _buildProjectorInfoSection(),
-                    const SizedBox(height: 24),
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(AppConstants.defaultPadding),
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceColor,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(AppConstants.largePadding),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Enhanced Header
+                          _buildEnhancedHeader(),
+                          const SizedBox(height: 24),
 
-                    // Lecturer Selection Section
-                    _buildLecturerSelectionSection(),
-                    const SizedBox(height: 24),
+                          // Projector Information Section
+                          _buildProjectorInfoSection(),
+                          const SizedBox(height: 24),
 
-                    // Purpose and Notes Section
-                    _buildPurposeAndNotesSection(),
-                    const SizedBox(height: 32),
+                          // Lecturer Selection Section
+                          _buildLecturerSelectionSection(),
+                          const SizedBox(height: 24),
 
-                    // Action Buttons
-                    _buildActionButtons(),
-                  ],
+                          // Purpose and Notes Section
+                          _buildPurposeAndNotesSection(),
+                          const SizedBox(height: 32),
+
+                          // Action Buttons
+                          _buildActionButtons(),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -589,296 +941,169 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
 
   /// Build enhanced header
   Widget _buildEnhancedHeader() {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppTheme.accentColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(Icons.send, color: AppTheme.accentColor, size: 24),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primaryColor.withValues(alpha: 0.1),
+            AppTheme.secondaryColor.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Issue Projector',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppTheme.textPrimary,
-                  fontWeight: FontWeight.w700,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Icon(
+              Icons.send_rounded,
+              color: AppTheme.primaryColor,
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Issue Projector',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                  ),
                 ),
-              ),
-              Text(
-                'Assign projector to a lecturer',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  _selectedProjector != null
+                      ? 'Assigning ${_selectedProjector!.serialNumber} to a lecturer'
+                      : 'Select a projector and assign it to a lecturer',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+                if (_selectedProjector != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.qr_code,
+                          size: 16,
+                          color: AppTheme.primaryColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Projector Selected',
+                          style: TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_selectedProjector!.modelName.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.secondaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppTheme.secondaryColor.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 16,
+                            color: AppTheme.secondaryColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _selectedProjector!.modelName,
+                            style: TextStyle(
+                              color: AppTheme.secondaryColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   /// Build projector information section
   Widget _buildProjectorInfoSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.qr_code, color: AppTheme.primaryColor, size: 20),
-              const SizedBox(width: 12),
-              Text(
-                'Projector Information',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.primaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+    if (_selectedProjector == null) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryColor.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.primaryColor.withValues(alpha: 0.2),
+            width: 1.5,
           ),
-          const SizedBox(height: 16),
-          _buildInfoRow('Serial Number', widget.projector.serialNumber),
-          const SizedBox(height: 8),
-          _buildInfoRow('Current Status', widget.projector.status),
-          if (widget.projector.lastIssuedTo != null) ...[
-            const SizedBox(height: 8),
-            _buildInfoRow('Last Issued To', widget.projector.lastIssuedTo!),
-          ],
-          if (widget.projector.lastIssuedDate != null) ...[
-            const SizedBox(height: 8),
-            _buildInfoRow(
-              'Last Issue Date',
-              _formatDate(widget.projector.lastIssuedDate!),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  /// Build lecturer selection section
-  Widget _buildLecturerSelectionSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppTheme.accentColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.person, size: 16, color: AppTheme.accentColor),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Select Lecturer',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              ' *',
-              style: TextStyle(
-                color: AppTheme.errorColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Choose an existing lecturer or add a new one',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
-        ),
-        const SizedBox(height: 12),
-
-        // Toggle Buttons
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _showAddLecturerForm ? _toggleAddLecturerForm : null,
-                icon: const Icon(Icons.search),
-                label: const Text('Search Existing'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _showAddLecturerForm
-                      ? AppTheme.textSecondary
-                      : AppTheme.accentColor,
-                  side: BorderSide(
-                    color: _showAddLecturerForm
-                        ? AppTheme.textTertiary
-                        : AppTheme.accentColor,
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _showAddLecturerForm ? null : _toggleAddLecturerForm,
-                icon: const Icon(Icons.person_add),
-                label: const Text('Add New'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _showAddLecturerForm
-                      ? AppTheme.accentColor
-                      : AppTheme.textSecondary,
-                  side: BorderSide(
-                    color: _showAddLecturerForm
-                        ? AppTheme.accentColor
-                        : AppTheme.textTertiary,
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // Conditional Content
-        if (!_showAddLecturerForm) ...[
-          // Search Field
-          TextFormField(
-            controller: _searchController,
-            onChanged: _searchLecturers,
-            decoration: InputDecoration(
-              hintText: 'Search lecturers...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      onPressed: _clearLecturerSelection,
-                      icon: const Icon(Icons.clear),
-                    )
-                  : null,
-              filled: true,
-              fillColor: AppTheme.backgroundColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-                borderSide: BorderSide(
-                  color: AppTheme.textTertiary.withValues(alpha: 0.3),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-                borderSide: BorderSide(
-                  color: AppTheme.textTertiary.withValues(alpha: 0.3),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-                borderSide: BorderSide(color: AppTheme.accentColor, width: 2),
-              ),
-            ),
-          ),
-        ] else ...[
-          // Add New Lecturer Form
-          _buildAddLecturerForm(),
-        ],
-
-        // Search Results
-        if (_isSearching && _searchResults.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Container(
-            constraints: const BoxConstraints(maxHeight: 200),
-            decoration: BoxDecoration(
-              color: AppTheme.backgroundColor,
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-              border: Border.all(
-                color: AppTheme.textTertiary.withValues(alpha: 0.3),
-              ),
-            ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: _searchResults.length,
-              itemBuilder: (context, index) {
-                final lecturer = _searchResults[index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppTheme.accentColor.withValues(
-                      alpha: 0.1,
-                    ),
-                    child: Text(
-                      lecturer.name[0].toUpperCase(),
-                      style: TextStyle(
-                        color: AppTheme.accentColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  title: Text(
-                    lecturer.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(lecturer.department),
-                      if (lecturer.phoneNumber != null &&
-                          lecturer.phoneNumber!.isNotEmpty)
-                        Text(
-                          lecturer.phoneNumber!,
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 11,
-                          ),
-                        ),
-                    ],
-                  ),
-                  trailing: Text(
-                    lecturer.email,
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                  onTap: () => _selectLecturer(lecturer),
-                );
-              },
-            ),
-          ),
-        ],
-
-        // Selected Lecturer Display
-        if (_selectedLecturer != null) ...[
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-              border: Border.all(
-                color: AppTheme.accentColor.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
+            Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: AppTheme.accentColor,
-                  child: Text(
-                    _selectedLecturer!.name[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.qr_code_scanner,
+                    color: AppTheme.primaryColor,
+                    size: 24,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -887,239 +1112,1373 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _selectedLecturer!.name,
-                        style: const TextStyle(
+                        'Projector Selection',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppTheme.primaryColor,
                           fontWeight: FontWeight.w600,
-                          fontSize: 16,
                         ),
                       ),
                       Text(
-                        _selectedLecturer!.department,
-                        style: TextStyle(color: AppTheme.textSecondary),
-                      ),
-                      Text(
-                        _selectedLecturer!.email,
+                        'No projector selected yet',
                         style: TextStyle(
                           color: AppTheme.textSecondary,
-                          fontSize: 12,
+                          fontSize: 14,
                         ),
                       ),
-                      if (_selectedLecturer!.phoneNumber != null) ...[
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.backgroundColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.textTertiary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: AppTheme.textSecondary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Please scan or select a projector to continue with the issuance process.',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _selectProjector,
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text('Scan Projector'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.borderRadius,
+                    ),
+                  ),
+                  elevation: 4,
+                  shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.qr_code,
+                  color: AppTheme.primaryColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Projector Information',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'Ready for issuance',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color:
+                      _selectedProjector!.status == AppConstants.statusAvailable
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color:
+                        _selectedProjector!.status ==
+                            AppConstants.statusAvailable
+                        ? Colors.green.withValues(alpha: 0.3)
+                        : Colors.orange.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _selectedProjector!.status == AppConstants.statusAvailable
+                          ? Icons.check_circle
+                          : Icons.warning,
+                      size: 16,
+                      color:
+                          _selectedProjector!.status ==
+                              AppConstants.statusAvailable
+                          ? Colors.green
+                          : Colors.orange,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _selectedProjector!.status,
+                      style: TextStyle(
+                        color:
+                            _selectedProjector!.status ==
+                                AppConstants.statusAvailable
+                            ? Colors.green
+                            : Colors.orange,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.backgroundColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.textTertiary.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              children: [
+                _buildInfoRow(
+                  'Serial Number',
+                  _selectedProjector!.serialNumber,
+                ),
+                const SizedBox(height: 12),
+                _buildInfoRow('Current Status', _selectedProjector!.status),
+                if (_selectedProjector!.modelName.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildInfoRow('Model', _selectedProjector!.modelName),
+                ],
+                if (_selectedProjector!.projectorName.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildInfoRow('Name', _selectedProjector!.projectorName),
+                ],
+                if (_selectedProjector!.lastIssuedTo != null) ...[
+                  const SizedBox(height: 12),
+                  _buildInfoRow(
+                    'Last Issued To',
+                    _selectedProjector!.lastIssuedTo!,
+                  ),
+                ],
+                if (_selectedProjector!.lastIssuedDate != null) ...[
+                  const SizedBox(height: 12),
+                  _buildInfoRow(
+                    'Last Issue Date',
+                    _formatDate(_selectedProjector!.lastIssuedDate!),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _selectProjector,
+                  icon: const Icon(Icons.change_circle),
+                  label: const Text('Change Projector'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primaryColor,
+                    side: BorderSide(color: AppTheme.primaryColor, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.borderRadius,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _clearProjectorSelection,
+                  icon: const Icon(Icons.clear),
+                  label: const Text('Clear Selection'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.textSecondary,
+                    side: BorderSide(color: AppTheme.textTertiary, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.borderRadius,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build lecturer selection section
+  Widget _buildLecturerSelectionSection() {
+    if (_selectedProjector == null) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppTheme.textTertiary.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.textTertiary.withValues(alpha: 0.2),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.textTertiary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.person_outline,
+                    size: 24,
+                    color: AppTheme.textTertiary,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Select Lecturer',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppTheme.textTertiary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Waiting for projector selection',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.backgroundColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.textTertiary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: AppTheme.textSecondary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Please select a projector first to continue with lecturer selection.',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.accentColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.accentColor.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.person,
+                  size: 24,
+                  color: AppTheme.accentColor,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Select Lecturer',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'Choose an existing lecturer or add a new one',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_selectedLecturer != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.green.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle, size: 16, color: Colors.green),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Lecturer Selected',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Toggle Buttons
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.backgroundColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.textTertiary.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    decoration: BoxDecoration(
+                      color: !_showAddLecturerForm
+                          ? AppTheme.accentColor
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _showAddLecturerForm
+                            ? _toggleAddLecturerForm
+                            : null,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search,
+                                color: !_showAddLecturerForm
+                                    ? Colors.white
+                                    : AppTheme.textSecondary,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Search Existing',
+                                style: TextStyle(
+                                  color: !_showAddLecturerForm
+                                      ? Colors.white
+                                      : AppTheme.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    decoration: BoxDecoration(
+                      color: _showAddLecturerForm
+                          ? AppTheme.accentColor
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _showAddLecturerForm
+                            ? null
+                            : _toggleAddLecturerForm,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.person_add,
+                                color: _showAddLecturerForm
+                                    ? Colors.white
+                                    : AppTheme.textSecondary,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Add New',
+                                style: TextStyle(
+                                  color: _showAddLecturerForm
+                                      ? Colors.white
+                                      : AppTheme.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Conditional Content
+          if (!_showAddLecturerForm) ...[
+            // Search Field
+            Container(
+              decoration: BoxDecoration(
+                color: AppTheme.backgroundColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.textTertiary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: TextFormField(
+                controller: _searchController,
+                onChanged: _searchLecturers,
+                decoration: InputDecoration(
+                  hintText: 'Search lecturers by name, department, or email...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          onPressed: _clearLecturerSelection,
+                          icon: const Icon(Icons.clear),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
+            // Add New Lecturer Form
+            _buildAddLecturerForm(),
+          ],
+
+          // Search Results
+          if (_isSearching && _searchResults.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 250),
+              decoration: BoxDecoration(
+                color: AppTheme.backgroundColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.textTertiary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _searchResults.length,
+                itemBuilder: (context, index) {
+                  final lecturer = _searchResults[index];
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _selectLecturer(lecturer),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: AppTheme.accentColor.withValues(
+                                alpha: 0.1,
+                              ),
+                              child: Text(
+                                lecturer.name[0].toUpperCase(),
+                                style: TextStyle(
+                                  color: AppTheme.accentColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    lecturer.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    lecturer.department,
+                                    style: TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  if (lecturer.phoneNumber != null &&
+                                      lecturer.phoneNumber!.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      lecturer.phoneNumber!,
+                                      style: TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  lecturer.email,
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.accentColor.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'Tap to select',
+                                    style: TextStyle(
+                                      color: AppTheme.accentColor,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+
+          // Selected Lecturer Display
+          if (_selectedLecturer != null) ...[
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.accentColor.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: AppTheme.accentColor,
+                    child: Text(
+                      _selectedLecturer!.name[0].toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _selectedLecturer!.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Text(
-                          _selectedLecturer!.phoneNumber!,
+                          _selectedLecturer!.department,
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _selectedLecturer!.email,
                           style: TextStyle(
                             color: AppTheme.textSecondary,
                             fontSize: 12,
                           ),
                         ),
+                        if (_selectedLecturer!.phoneNumber != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            _selectedLecturer!.phoneNumber!,
+                            style: TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                IconButton(
-                  onPressed: _clearLecturerSelection,
-                  icon: const Icon(Icons.close),
-                  color: AppTheme.textSecondary,
-                ),
-              ],
+                  IconButton(
+                    onPressed: _clearLecturerSelection,
+                    icon: const Icon(Icons.close),
+                    color: AppTheme.textSecondary,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.8),
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
 
-        // No Results Message
-        if (_isSearching &&
-            _searchResults.isEmpty &&
-            _searchQuery.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.textTertiary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.search_off, color: AppTheme.textSecondary, size: 20),
-                const SizedBox(width: 12),
-                Text(
-                  'No lecturers found matching "$_searchQuery"',
-                  style: TextStyle(color: AppTheme.textSecondary),
+          // No Results Message
+          if (_isSearching &&
+              _searchResults.isEmpty &&
+              _searchQuery.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.textTertiary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.textTertiary.withValues(alpha: 0.2),
                 ),
-              ],
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search_off,
+                    color: AppTheme.textSecondary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'No lecturers found',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'No lecturers found matching "$_searchQuery". Try a different search term or add a new lecturer.',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
   /// Build purpose and notes section
   Widget _buildPurposeAndNotesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Purpose Field
-        Row(
+    if (_selectedProjector == null) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppTheme.textTertiary.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.textTertiary.withValues(alpha: 0.2),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.info, size: 16, color: AppTheme.primaryColor),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.textTertiary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.info_outline,
+                    size: 24,
+                    color: AppTheme.textTertiary,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Purpose & Notes',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppTheme.textTertiary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Waiting for projector selection',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Text(
-              'Purpose of Issue',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.textPrimary,
-                fontWeight: FontWeight.w600,
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.backgroundColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.textTertiary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: AppTheme.textSecondary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Please select a projector first to continue.',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Brief description of why the projector is being issued',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _purposeController,
-          maxLines: 2,
-          decoration: InputDecoration(
-            hintText: 'e.g., Lecture in Room 201, Department meeting...',
-            filled: true,
-            fillColor: AppTheme.backgroundColor,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-              borderSide: BorderSide(
-                color: AppTheme.textTertiary.withValues(alpha: 0.3),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-              borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
+      );
+    }
 
-        // Notes Field
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.note, size: 16, color: AppTheme.primaryColor),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Additional Notes',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.2),
+          width: 1.5,
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Optional: Add any special instructions or notes',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _notesController,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: 'Enter any additional notes...',
-            filled: true,
-            fillColor: AppTheme.backgroundColor,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-              borderSide: BorderSide(
-                color: AppTheme.textTertiary.withValues(alpha: 0.3),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.info, size: 24, color: AppTheme.primaryColor),
               ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-              borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
-            ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Purpose & Notes',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'Provide details about the issuance',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 20),
+
+          // Purpose Field
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.label_important,
+                    color: AppTheme.primaryColor,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Purpose of Issue',
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    ' *',
+                    style: TextStyle(
+                      color: AppTheme.errorColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Brief description of why the projector is being issued',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.backgroundColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.textTertiary.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: TextFormField(
+                  controller: _purposeController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    hintText:
+                        'e.g., Lecture in Room 201, Department meeting, Training session...',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Notes Field
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.note, color: AppTheme.primaryColor, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Additional Notes',
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Optional: Add any special instructions or notes',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.backgroundColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.textTertiary.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: TextFormField(
+                  controller: _notesController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    hintText:
+                        'Enter any additional notes, special instructions, or requirements...',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
   /// Build action buttons
   Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.primaryColor,
-              side: BorderSide(color: AppTheme.primaryColor, width: 1.5),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-              ),
-            ),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
+    if (_selectedProjector == null) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryColor.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.primaryColor.withValues(alpha: 0.2),
+            width: 1.5,
           ),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: (_isLoading || _selectedLecturer == null)
-                ? null
-                : _issueProjector,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _selectedLecturer != null
-                  ? AppTheme.accentColor
-                  : AppTheme.textTertiary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-              ),
-              elevation: 4,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.play_arrow,
+                    color: AppTheme.primaryColor,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ready to Start',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Begin the issuance process',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            child: _isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Text(
-                    _selectedLecturer != null
-                        ? 'Issue to ${_selectedLecturer!.name}'
-                        : 'Select Lecturer First',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _selectProjector,
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text('Start by Scanning a Projector'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.borderRadius,
                     ),
                   ),
-          ),
+                  elevation: 6,
+                  shadowColor: AppTheme.primaryColor.withValues(alpha: 0.4),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: _selectedLecturer != null
+            ? Colors.green.withValues(alpha: 0.05)
+            : AppTheme.textTertiary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _selectedLecturer != null
+              ? Colors.green.withValues(alpha: 0.2)
+              : AppTheme.textTertiary.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _selectedLecturer != null
+                      ? Colors.green.withValues(alpha: 0.15)
+                      : AppTheme.textTertiary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _selectedLecturer != null
+                      ? Icons.check_circle
+                      : Icons.pending,
+                  color: _selectedLecturer != null
+                      ? Colors.green
+                      : AppTheme.textTertiary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _selectedLecturer != null
+                          ? 'Ready to Issue'
+                          : 'Almost Ready',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: _selectedLecturer != null
+                            ? Colors.green
+                            : AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      _selectedLecturer != null
+                          ? 'All requirements are met'
+                          : 'Please select a lecturer to continue',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_selectedLecturer != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.green.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.verified, size: 16, color: Colors.green),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Ready',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () => Navigator.of(context).pop(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primaryColor,
+                    side: BorderSide(color: AppTheme.primaryColor, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.borderRadius,
+                      ),
+                    ),
+                  ),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  child: ElevatedButton(
+                    onPressed: (_isLoading || _selectedLecturer == null)
+                        ? null
+                        : _issueProjector,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _selectedLecturer != null
+                          ? Colors.green
+                          : AppTheme.textTertiary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.borderRadius,
+                        ),
+                      ),
+                      elevation: _selectedLecturer != null ? 6 : 2,
+                      shadowColor: _selectedLecturer != null
+                          ? Colors.green.withValues(alpha: 0.4)
+                          : Colors.transparent,
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _selectedLecturer != null
+                                    ? Icons.send
+                                    : Icons.pending,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _selectedLecturer != null
+                                    ? 'Issue to ${_selectedLecturer!.name}'
+                                    : 'Select Lecturer First',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_selectedLecturer != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.green, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Projector will be issued to ${_selectedLecturer!.name} from ${_selectedLecturer!.department}',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

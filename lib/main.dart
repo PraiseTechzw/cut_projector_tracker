@@ -12,7 +12,6 @@ import 'features/auth/presentation/screens/welcome_screen.dart';
 import 'features/auth/presentation/widgets/auth_guard.dart';
 import 'shared/widgets/main_navigation.dart';
 import 'features/scanning/presentation/screens/scanning_screen.dart';
-import 'features/issuance/presentation/screens/issuance_screen.dart';
 import 'features/returns/presentation/screens/returns_screen.dart';
 import 'features/assets/presentation/screens/add_projector_screen.dart';
 import 'features/assets/presentation/screens/edit_projector_screen.dart';
@@ -21,6 +20,7 @@ import 'features/lecturers/presentation/screens/edit_lecturer_screen.dart';
 import 'features/lecturers/presentation/screens/lecturers_screen.dart';
 import 'shared/models/projector.dart';
 import 'shared/models/lecturer.dart';
+import 'features/issuance/presentation/screens/issue_projector_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -81,7 +81,8 @@ final _router = GoRouter(
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         final projector = extra?['projector'] as Projector?;
-        return IssuanceScreen(projector: projector);
+        // Allow null projector for main navigation tab usage
+        return IssueProjectorScreen(projector: projector);
       },
     ),
     GoRoute(
@@ -102,7 +103,9 @@ final _router = GoRouter(
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         final projector = extra?['projector'] as Projector?;
-        if (projector == null) return const _ErrorScreen(error: 'Projector not found');
+        if (projector == null) {
+          return const _ErrorScreen(error: 'Projector not found');
+        }
         return AuthGuard(
           requireAuth: true,
           child: EditProjectorScreen(projector: projector),
@@ -119,7 +122,9 @@ final _router = GoRouter(
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         final lecturer = extra?['lecturer'] as Lecturer?;
-        if (lecturer == null) return const _ErrorScreen(error: 'Lecturer not found');
+        if (lecturer == null) {
+          return const _ErrorScreen(error: 'Lecturer not found');
+        }
         return AuthGuard(
           requireAuth: true,
           child: EditLecturerScreen(lecturer: lecturer),
