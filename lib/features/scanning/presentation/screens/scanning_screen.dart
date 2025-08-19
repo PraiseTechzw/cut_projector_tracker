@@ -69,7 +69,7 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
     try {
       final permissionService = ref.read(permissionServiceProvider);
       final result = await permissionService.initializeCameraPermission();
-      
+
       switch (result) {
         case CameraPermissionResult.granted:
           _setupCamera();
@@ -84,7 +84,8 @@ class _ScanningScreenState extends ConsumerState<ScanningScreen>
           setState(() {
             _isPermissionLoading = false;
             _permissionPermanentlyDenied = true;
-            _errorMessage = 'Camera permission permanently denied. Please enable it in app settings.';
+            _errorMessage =
+                'Camera permission permanently denied. Please enable it in app settings.';
           });
           break;
         case CameraPermissionResult.restricted:
