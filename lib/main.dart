@@ -13,6 +13,7 @@ import 'features/auth/presentation/widgets/auth_guard.dart';
 import 'shared/widgets/main_navigation.dart';
 import 'features/scanning/presentation/screens/scanning_screen.dart';
 import 'features/returns/presentation/screens/returns_screen.dart';
+import 'features/returns/presentation/screens/return_projector_screen.dart';
 import 'features/assets/presentation/screens/add_projector_screen.dart';
 import 'features/assets/presentation/screens/edit_projector_screen.dart';
 import 'features/lecturers/presentation/screens/add_lecturer_screen.dart';
@@ -90,7 +91,13 @@ final _router = GoRouter(
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         final projector = extra?['projector'] as Projector?;
-        return ReturnsScreen(projector: projector);
+        if (projector != null) {
+          // If projector is provided, show the detailed return screen
+          return ReturnProjectorScreen(projector: projector);
+        } else {
+          // If no projector, show the main returns screen
+          return const ReturnsScreen();
+        }
       },
     ),
     GoRoute(
