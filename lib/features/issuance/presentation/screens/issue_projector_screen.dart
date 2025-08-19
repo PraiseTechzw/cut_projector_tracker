@@ -278,46 +278,51 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.8,
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 20,
-                  offset: const Offset(0, -8),
-                ),
-              ],
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            child: Column(
-              children: [
-                _buildManualEntryHeader(),
-                _buildAvailableProjectorsList(setState),
-                _buildSearchInput(
-                  manualEntryController,
-                  setState,
-                  searchResults,
-                  isSearching,
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.8,
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
                 ),
-                _buildSearchResults(
-                  searchResults,
-                  isSearching,
-                  manualEntryController,
-                  setState,
-                ),
-                _buildHelpfulTip(),
-                _buildModalActionButtons(
-                  manualEntryController,
-                  setState,
-                  searchResults,
-                  isSearching,
-                ),
-              ],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, -8),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  _buildManualEntryHeader(),
+                  _buildAvailableProjectorsList(setState),
+                  _buildSearchInput(
+                    manualEntryController,
+                    setState,
+                    searchResults,
+                    isSearching,
+                  ),
+                  _buildSearchResults(
+                    searchResults,
+                    isSearching,
+                    manualEntryController,
+                    setState,
+                  ),
+                  _buildHelpfulTip(),
+                  _buildModalActionButtons(
+                    manualEntryController,
+                    setState,
+                    searchResults,
+                    isSearching,
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -885,15 +890,38 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
+          // Close the modal first
           Navigator.of(context).pop();
+
+          // Update the main screen state
           setState(() {
             _selectedProjector = projector;
           });
+
+          // Update the UI to reflect the selection
           _validateProjectorStatus();
+
+          // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Projector ${projector.serialNumber} selected!'),
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Projector ${projector.serialNumber} selected for issuance!',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
               backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
         },
@@ -1564,10 +1592,14 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
           builder: (BuildContext context) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.85,
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceColor,
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.85,
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(24),
                   topRight: Radius.circular(24),
@@ -1602,7 +1634,8 @@ class _IssueProjectorScreenState extends ConsumerState<IssueProjectorScreen>
                   _buildConfirmationActions(),
                 ],
               ),
-            );
+            ),
+          );
           },
         ) ??
         false;
